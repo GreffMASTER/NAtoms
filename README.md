@@ -12,6 +12,8 @@ This is testing fork for online multiplayer implementation in KleleAtoms using E
 `-p4 <type>` - change player 4 type  
 `-kbmode` - enable keyboard-only mode (with keyboard-controlled cursor)  
 `-mobile` - simulate mobile/web mode (fullscreen, limited grid size etc.)  
+`-host <ip:port>` - host a multiplayer game (no menu)  
+`-connect <ip:port>` - connect to a multiplayer game (no menu)  
 `-os <name>` - spoof the target OS (`-os Web` simulates HTML5 love.js version)
 
 ## Credits  
