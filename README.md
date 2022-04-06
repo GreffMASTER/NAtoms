@@ -1,5 +1,5 @@
 # NAtoms
-A online multiplayer fork of KleleAtoms .
+A online multiplayer fork for KleleAtoms .
 
 This is testing fork for online multiplayer implementation in KleleAtoms using ENet.
 
