@@ -5,6 +5,7 @@ enetclient = nil
 hostevent = nil
 clientpeer = nil
 ready = false
+connected = false
 
 players = {}
 
@@ -27,7 +28,7 @@ function networkstate.init()
     elseif(_NAServerIP ~= nil) then
 
         print("Connecting to ".._NAServerIP)
-        _CAState.printmsg("Connecting to: ".._NAServerIP,4)
+        _CAState.printmsg("Connecting to: ".._NAServerIP,30)
         enetclient = enet.host_create()
         clientpeer = enetclient:connect(_NAServerIP)
         mode = "_NAClient"
@@ -37,10 +38,9 @@ end
 
 function networkstate.update(dt)
     if(mode == "_NAServer") then
-        ServerListen()
-    elseif(mode == "_NAClient") then
-        ClientSend()
+        ServerThinker()
     end
+	ClientThinker()
 end
 
 function networkstate.draw()
@@ -51,18 +51,17 @@ function networkstate.draw()
             love.graphics.print("Player "..i..": None",10,(i*20)+10)
         end
     end
+	love.graphics.print("Press enter to switch your ready state",0,0)
 end
 
 function networkstate.keypressed(key)
     if(key == "return") then
-        if(ready==false) then
-            ready = true
-            clientpeer:send("imready")
-        end
-        if(ready==true) then
-            ready = false
-            clientpeer:send("imnotready")
-        end
+	    ready = flipBool(ready)
+		if(ready == true) then
+		    clientpeer:send("imready")
+		else
+		    clientpeer:send("imnotready")
+		end
     end
 end
 
@@ -72,60 +71,81 @@ end
 function networkstate.mousereleased(x,y,button)
 end
 
-function ServerListen()
+function ServerThinker()
 
-	hostevent = enethost:service(100)
+	hostevent = enethost:service(30)
 	
 	if hostevent then
 		print("Server detected message type: " .. hostevent.type)
 		if hostevent.type == "connect" then 
 			print(hostevent.peer, "connected.")
             players[hostevent.peer:index()] = {tostring(hostevent.peer),false}
-            _CAState.printmsg(tostring(hostevent.peer).." connected to the game.",4)
             enethost:broadcast(playerListToString(players))
+			enethost:broadcast("CONN|"..tostring(hostevent.peer).."|END")
 		end
         if hostevent.type == "disconnect" then
             print(hostevent.peer, "disconnected.")
             players[hostevent.peer:index()] = nil
-            _CAState.printmsg(tostring(hostevent.peer).." disconnected from the game.",4)
             enethost:broadcast(playerListToString(players))
+			enethost:broadcast("DISCONN|"..tostring(hostevent.peer).."|END")
         end
 		if hostevent.type == "receive" then
-			print("Received message: ", hostevent.data, hostevent.peer)
-            if(hostevent.data=="imraedy") then
+			print("Server received message: ", hostevent.data, hostevent.peer)
+            if(hostevent.data=="imready") then
                 players[hostevent.peer:index()][2] = true
-                _CAState.printmsg(tostring(hostevent.peer).." is ready.",4)
+				enethost:broadcast("READY|"..tostring(hostevent.peer).."|true|END")
                 enethost:broadcast(playerListToString(players))
             end
             if(hostevent.data=="imnotready") then
                 players[hostevent.peer:index()][2] = false
-                _CAState.printmsg(tostring(hostevent.peer).." is not ready.",4)
+				enethost:broadcast("READY|"..tostring(hostevent.peer).."|false|END")
                 enethost:broadcast(playerListToString(players))
             end
 		end
 	end
-
-    ClientSend()
-
 end
 
 
 
-function ClientSend()
+function ClientThinker()
 
-    clientevent = enetclient:service(100)
+    clientevent = enetclient:service(30)
 
     if clientevent then
         print("Client detected message type: " .. clientevent.type)
         if clientevent.type == "connect" then
-            
+		    connected = true
+            _CAState.printmsg("Successfully connected to the game.",4)
+        end
+		if clientevent.type == "disconnect" then
+		    if(connected==false) then
+		        love.window.showMessageBox("Connection error", "Could not connect to the server", "error")
+			else
+			    love.window.showMessageBox("Connection error", "Disconnected from server", "error")
+			end
+            love.event.quit()
         end
         if clientevent.type == "receive" then
-			print("Received message: ", clientevent.data, clientevent.peer)
-            packetStringDecode(clientevent.data)
-            if(mode~="_NAServer") then
-                players = playerListPacketToArray(packetStringDecode(clientevent.data))
-            end
+			print("Client received message: ", clientevent.data, clientevent.peer)
+            packet = packetStringDecode(clientevent.data)
+			if(packet[1]=="PLYRS") then
+				if(mode~="_NAServer") then
+					players = playerListPacketToArray(packet)
+				end
+			end
+			if(packet[1]=="CONN") then
+			    _CAState.printmsg(packet[2].." connected to the game.",4)
+			end
+			if(packet[1]=="DISCONN")then
+			    _CAState.printmsg(packet[2].." disconnected from the game.",4)
+			end
+			if(packet[1]=="READY") then
+			    if(packet[3]=="true") then
+			        _CAState.printmsg(packet[2].." is ready.",4)
+				elseif(packet[3]=="false") then
+				    _CAState.printmsg(packet[2].." is not ready.",4)
+			    end
+			end
 		end
     end
 end
@@ -133,10 +153,18 @@ end
 function packetStringDecode(str)
     packet = {}
     arr = string.explode(str,"|")
-    packet = {arr[1],arr[2],arr[3],{}}
-    for i=1,#arr-3 do
-        table.insert(packet[4],arr[i+3])
-    end
+	if(arr[1]=="PLYRS") then
+        packet = {arr[1],arr[2],arr[3],{}}
+        for i=1,#arr-3 do
+            table.insert(packet[4],arr[i+3])
+        end
+	elseif(arr[1]=="READY") then
+	    packet = {arr[1],arr[2],arr[3]}
+	elseif(arr[1]=="CONN") then
+	    packet = {arr[1],arr[2]}
+	elseif(arr[1]=="DISCONN") then
+	    packet = {arr[1],arr[2]}
+	end
     return packet
 end
 
@@ -179,6 +207,16 @@ function string.explode(str, div)
         o[#o+1],str = str:sub(1,pos1-1),str:sub(pos2+1)
     end
     return o
+end
+
+function flipBool(bool)
+    local out
+    if(bool==false) then
+	    out = true
+	else
+	    out = false
+    end
+	return out
 end
 
 return networkstate
