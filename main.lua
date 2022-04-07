@@ -41,7 +41,7 @@ local function checkSetValues() --Checks if values are in a valid range
 end
 
 local function readArgs(args)
-    local valmode = 0 --0 - nothing, 1 - grid width, 2 - grid height, 3 - AI difficulty, 4-7 - Player types, 100 - OS type
+    local valmode = 0 --0 - nothing, 1 - grid width, 2 - grid height, 3 - AI difficulty, 4-7 - Player types, 8 - Host IP, 9 - Server IP, 100 - OS type
     for k,v in ipairs(args) do
         if valmode == 0 then
             if v == "-gridwidth" or v == "-gw" then
@@ -55,6 +55,10 @@ local function readArgs(args)
                 end
             elseif v == "-mobilemode" or v == "-mobile" then
                 _CAIsMobile = true
+            elseif v == "-host" then
+                valmode = 8
+            elseif v == "-connect" then
+                valmode = 9
             elseif v == "-forceos" or v == "-os" then
                 valmode = 100
             elseif v == "-kbmode" then --Keyboard mode (adds virtual mouse controlled by keyboard)
@@ -63,6 +67,12 @@ local function readArgs(args)
         elseif valmode > 0 and valmode <= 7 then
             local index = settsvals[valmode]
             _G[index] = tonumber(v) or _G[index]
+            valmode = 0
+        elseif valmode == 8 then
+            _NAHostIP = v
+            valmode = 0
+        elseif valmode == 9 then
+            _NAServerIP = v
             valmode = 0
         elseif valmode == 100 then --Force OS type
             _CAOSType = v
@@ -132,12 +142,24 @@ function love.load(args)
     _CAOSType = love.system.getOS()
     _CAIsMobile = (_CAOSType == "Android" or _CAOSType == "iOS" or _CAOSType == "Web") --If true, mobile mode will be enabled
     _CAKBMode = false --Keyboard mode
+    _NAHostIP = nil --IP address and port of host
+    _NAServerIP = nil --IP address and port of server
     loadSettings()
     readArgs(args) --Read commandline parameters
     checkSetValues() --Make sure the settings are within the acceptable range
-    _CAState.list["game"] = require("states.game.gamestate")
-    _CAState.list["menu"] = require("states.menu.menustate")
-    _CAState.change("menu")
+    if(_NAHostIP ~= nil) then --If host mode is enabled
+        _CAState.list["game"] = require("states.game.gamestate")
+        _CAState.list["netmenu"] = require("states.menu.networkstate")
+        _CAState.change("netmenu")
+    elseif(_NAServerIP ~= nil) then --If join mode is enabled
+        _CAState.list["game"] = require("states.game.gamestate")
+        _CAState.list["netmenu"] = require("states.menu.networkstate")
+        _CAState.change("netmenu")
+    else
+        _CAState.list["game"] = require("states.game.gamestate")
+        _CAState.list["menu"] = require("states.menu.menustate")
+        _CAState.change("menu")
+    end
 end
 
 love.update = _CAState.update
