@@ -1,1 +1,1 @@
-lovec . -connect 192.168.100.48:1337
+lovec . -connect localhost:5047

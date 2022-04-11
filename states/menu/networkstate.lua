@@ -56,7 +56,7 @@ end
 
 function networkstate.keypressed(key)
     if(key == "return") then
-	    ready = flipBool(ready)
+	    ready = not ready
 		if(ready == true) then
 		    clientpeer:send("imready")
 		else
@@ -207,16 +207,6 @@ function string.explode(str, div)
         o[#o+1],str = str:sub(1,pos1-1),str:sub(pos2+1)
     end
     return o
-end
-
-function flipBool(bool)
-    local out
-    if(bool==false) then
-	    out = true
-	else
-	    out = false
-    end
-	return out
 end
 
 return networkstate
