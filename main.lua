@@ -128,6 +128,7 @@ local function loadSettings()
 end
 
 function love.load(args)
+    net = require("network.networkhandler")
     love.graphics.setDefaultFilter("linear","linear",0)
     _CAFont16 = love.graphics.newFont(16) --Default font, size 16
     _CAFont24 = love.graphics.newFont(24) --Default font, size 24
@@ -149,11 +150,11 @@ function love.load(args)
     checkSetValues() --Make sure the settings are within the acceptable range
     if(_NAHostIP ~= nil) then --If host mode is enabled
         _CAState.list["game"] = require("states.game.gamestate")
-        _CAState.list["netmenu"] = require("states.menu.networkstate")
+        _CAState.list["netmenu"] = require("states.menu.networkmenustate")
         _CAState.change("netmenu")
     elseif(_NAServerIP ~= nil) then --If join mode is enabled
         _CAState.list["game"] = require("states.game.gamestate")
-        _CAState.list["netmenu"] = require("states.menu.networkstate")
+        _CAState.list["netmenu"] = require("states.menu.networkmenustate")
         _CAState.change("netmenu")
     else
         _CAState.list["game"] = require("states.game.gamestate")

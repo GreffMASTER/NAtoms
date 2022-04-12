@@ -1,1 +1,1 @@
-lovec . -host 192.168.100.48:5047
+lovec . -host localhost:5047
