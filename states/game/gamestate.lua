@@ -64,7 +64,7 @@ function gamestate.init(laststate,argtab)
         gametut.init(gamelogic)
     else
         gamelogic.loadAll(_CAGridW,_CAGridH,{_CAPlayer1,_CAPlayer2,_CAPlayer3,_CAPlayer4})
-        ttime = gamelogic.loadGame()
+        if(_NAOnline==false) then ttime = gamelogic.loadGame() end
     end
     if ttime then restarttime = ttime; _CAState.printmsg("Saved game loaded.",2) end
     return gamelogic.winsize[1],gamelogic.winsize[2]
@@ -81,6 +81,13 @@ function gamestate.update(dt)
             if gametut.update(dt) then return end
         end
         gamelogic.tick(dt)
+    end
+    -- NAtoms
+    if(_NAOnline) then
+        if(net.mode == "Server") then
+            net.ServerThinker(dt)
+        end
+	    net.ClientThinker(dt)
     end
 end
 
@@ -213,6 +220,17 @@ function gamestate.mousereleased(x,y,button)
             pauseGame()
         else
             _CAState.change("menu")
+        end
+    end
+end
+
+-- NAtoms
+
+function gamestate.quit()
+    if(_NAOnline) then
+        net.clientpeer:disconnect_now()
+        if(net.mode=="Server") then
+            net.stopServer()
         end
     end
 end
