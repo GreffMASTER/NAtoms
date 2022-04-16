@@ -21,7 +21,7 @@ function networkmenustate.draw()
     -- draw player list
     for i,p in ipairs(net.players) do
         if(p~=nil) then
-            love.graphics.print("Player "..p[1]..": "..p[2].." "..tostring(p[3]),10,i*20)
+            love.graphics.print("Player "..tostring(p[1])..": "..p[2].." "..tostring(p[3]),10,i*20)
         end
     end
 
@@ -32,9 +32,9 @@ function networkmenustate.keypressed(key)
     if(key == "return") then -- press enter to toggle if ready
 	    ready = not ready
 		if(ready == true) then
-		    net.clientpeer:send("imready")
+		    net.clientpeer:send(gmpacket.encode("IMREADY",{}))
 		else
-		    net.clientpeer:send("imnotready")
+		    net.clientpeer:send(gmpacket.encode("IMNOTREADY",{}))
 		end
     end
 end

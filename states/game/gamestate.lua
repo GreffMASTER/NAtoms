@@ -67,6 +67,9 @@ function gamestate.init(laststate,argtab)
         if(_NAOnline==false) then ttime = gamelogic.loadGame() end
     end
     if ttime then restarttime = ttime; _CAState.printmsg("Saved game loaded.",2) end
+    if(_NAOnline==true) then
+        net.gamelogic = gamelogic
+    end
     return gamelogic.winsize[1],gamelogic.winsize[2]
 end
 
@@ -204,7 +207,15 @@ function gamestate.mousepressed(x, y, button)
         elseif x >= 10 and x < 10+gw*gamelogic.cGRIDSIZE and y >= 90 and y < 90+gh*gamelogic.cGRIDSIZE then
             local pressx = math.floor((x-10)/gamelogic.cGRIDSIZE)+1
             local pressy = math.floor((y-90)/gamelogic.cGRIDSIZE)+1
-            gamelogic.clickedTile(pressx,pressy)
+            if(_NAOnline==false) then
+                gamelogic.clickedTile(pressx,pressy)
+            else -- NAtoms
+                if(gamelogic.curplayer==net.yourindex) then
+                    net.prevplayerturn = gamelogic.curplayer
+                    gamelogic.clickedTile(pressx,pressy)
+                    net.clientpeer:send(gmpacket.encode("CLICKEDTILE",{pressx,pressy}))
+                end
+            end
         end
     end
 end

@@ -1,5 +1,5 @@
 enet = require "enet"
-packet = require "network.packet"
+gmpacket = require "network.gmpacket"
 
 local nah = {}
 
@@ -12,6 +12,10 @@ nah.connected = false
 nah.players = {} -- {peer_index, ip, ready}
 nah.countdown = 5
 nah.ingame = false
+
+nah.yourindex = nil
+nah.gamelogic = nil
+nah.prevplayerturn = nil
 
 function nah.init()
     if(_NAHostIP ~= nil) then
@@ -52,12 +56,16 @@ function nah.ServerThinker(dt)
         end
         -- every time the countdown increments each second, send a message to all players
         if(math.ceil(nah.countdown) ~= math.ceil(nah.countdown-dt)) then
-            nah.enethost:broadcast("COUNTING|"..tostring(math.floor(nah.countdown)).."|END")
+            nah.enethost:broadcast(gmpacket.encode("COUNTING",{math.floor(nah.countdown)}))
         end
         if(nah.countdown <= 0) then
             nah.ingame = true
             nah.countdown = 5
-            nah.enethost:broadcast(packet.playerListToConfig(nah.players))
+            local calc = 0
+            for i=1,#nah.players do
+                calc = calc + 2^(nah.players[i][1]-1)
+            end
+            nah.enethost:broadcast(gmpacket.encode("START",{_CAGridW,_CAGridH,calc}))
         end
     else
         nah.countdown = 5
@@ -69,11 +77,11 @@ function nah.ServerThinker(dt)
 			print(nah.hostevent.peer, "connected.")
             if(nah.ingame==false) then
                 table.insert(nah.players,nah.hostevent.peer:index(),{nah.hostevent.peer:index(),tostring(nah.hostevent.peer),false})
-                nah.enethost:broadcast(packet.playerListToString(nah.players))
-			    nah.enethost:broadcast("CONN|"..tostring(nah.hostevent.peer).."|END")
+                nah.hostevent.peer:send(gmpacket.encode("INDEX",{nah.hostevent.peer:index()}))
+                nah.enethost:broadcast(gmpacket.encode("PLYRS",nah.playerListToArray(nah.players)))
+                nah.enethost:broadcast(gmpacket.encode("CONN",{tostring(nah.hostevent.peer)}))
             else
-                nah.hostevent.peer:send("INGAME|END")
-                nah.hostevent.peer:disconnect_now()
+                nah.hostevent.peer:disconnect_now(10)
             end
 		end
         if nah.hostevent.type == "disconnect" then
@@ -85,34 +93,53 @@ function nah.ServerThinker(dt)
                     break
                 end
             end
-            nah.enethost:broadcast(packet.playerListToString(nah.players))
-			nah.enethost:broadcast("DISCONN|"..tostring(nah.hostevent.peer).."|END")
+
+            nah.enethost:broadcast(gmpacket.encode("PLYRS",nah.playerListToArray(nah.players)))
+            nah.enethost:broadcast(gmpacket.encode("DISCONN",{tostring(nah.hostevent.peer)}))
         end
 		if nah.hostevent.type == "receive" then
 			print("Server received message: ", nah.hostevent.data, nah.hostevent.peer)
+            local packet = gmpacket.decode(nah.hostevent.data)
 
-            if(nah.hostevent.data=="imready") then
+            if(packet["name"]=="IMREADY") then
                 for i,p in ipairs(nah.players) do
                     if(p[1]==nah.hostevent.peer:index()) then
                         nah.players[i][3] = true
                         break
                     end
                 end
-				nah.enethost:broadcast("READY|"..tostring(nah.hostevent.peer).."|true|END")
-                nah.enethost:broadcast(packet.playerListToString(nah.players))
+                nah.enethost:broadcast(gmpacket.encode("READY",{tostring(nah.hostevent.peer),true}))
+                nah.enethost:broadcast(gmpacket.encode("PLYRS",nah.playerListToArray(nah.players)))
             end
 
-            if(nah.hostevent.data=="imnotready") then
+            if(packet["name"]=="IMNOTREADY") then
                 for i,p in ipairs(nah.players) do
                     if(p[1]==nah.hostevent.peer:index()) then
                         nah.players[i][3] = false
                         break
                     end
                 end
-				nah.enethost:broadcast("READY|"..tostring(nah.hostevent.peer).."|false|END")
-                nah.enethost:broadcast(packet.playerListToString(nah.players))
+				nah.enethost:broadcast(gmpacket.encode("READY",{tostring(nah.hostevent.peer),false}))
+                nah.enethost:broadcast(gmpacket.encode("PLYRS",nah.playerListToArray(nah.players))) 
             end
 
+            if(packet["name"]=="CLICKEDTILE") then
+
+                local playerturn = nah.gamelogic.curplayer
+
+                if(nah.hostevent.peer:index()==1) then
+                    playerturn = nah.prevplayerturn
+                end
+
+                print("Player "..nah.hostevent.peer:index().." wants to click tile "..packet["data"][1]..","..packet["data"][2])
+                print("Turn for player "..playerturn)
+                if(nah.hostevent.peer:index()==playerturn) then
+                    nah.enethost:broadcast(gmpacket.encode("CLICKON",{packet["data"][1],packet["data"][2]}))
+                else
+                    nah.hostevent.peer:disconnect_now()
+                    print("ILLEGAL MOVE!!!")
+                end
+            end
 		end
 	end
 end
@@ -140,56 +167,66 @@ function nah.ClientThinker(dt)
 
         if nah.clientevent.type == "receive" then
 			print("Client received message: ", nah.clientevent.data, nah.clientevent.peer)
-            local pckt = packet.stringDecode(nah.clientevent.data)
+            local packet = gmpacket.decode(nah.clientevent.data)
 
-			if(pckt[1]=="PLYRS") then
+			if(packet["name"]=="PLYRS") then
 				if(nah.mode~="Server") then
-					nah.players = pckt[3]
+                    -- to do, fix player list
+                    print(dump(packet["data"]))
+                    local playerdata = {}
+                    for i=1,(#packet["data"])/3 do
+                        table.insert(playerdata,{})
+                        for j=1,3 do
+                            table.insert(playerdata[i],packet["data"][(i-1)*3+j])
+                        end
+                    end
+					nah.players = playerdata
 				end
 			end
 
-			if(pckt[1]=="CONN") then
-			    _CAState.printmsg(pckt[2].." connected to the game.",4)
+            if(packet["name"]=="INDEX") then
+                nah.yourindex = packet["data"][1]
+            end
+
+			if(packet["name"]=="CONN") then
+			    _CAState.printmsg(packet["data"][1].." connected to the game.",4)
 			end
 
-			if(pckt[1]=="DISCONN")then
-			    _CAState.printmsg(pckt[2].." disconnected from the game.",4)
+			if(packet["name"]=="DISCONN")then
+			    _CAState.printmsg(packet["data"][1].." disconnected from the game.",4)
 			end
 
-			if(pckt[1]=="READY") then
-			    if(pckt[3]=="true") then
-			        _CAState.printmsg(pckt[2].." is ready.",4)
-				elseif(pckt[3]=="false") then
-				    _CAState.printmsg(pckt[2].." is not ready.",4)
+			if(packet["name"]=="READY") then
+			    if(packet["data"][2]==true) then
+			        _CAState.printmsg(packet["data"][1].." is ready.",4)
+				elseif(packet["data"][2]==false) then
+				    _CAState.printmsg(packet["data"][1].." is not ready.",4)
 			    end
 			end
 
-            if(pckt[1]=="COUNTING") then
-                _CAState.printmsg("Game starting in "..pckt[2].." second(s).",1)
+            if(packet["name"]=="COUNTING") then
+                _CAState.printmsg("Game starting in "..packet["data"][1].." second(s).",1)
             end
 
-            if(pckt[1]=="START") then
-                print(dump(pckt))
+            if(packet["name"]=="START") then
                 if(nah.mode=="Client") then
-                    _CAGridW = pckt[2]
-                    _CAGridH = pckt[3]
+                    _CAGridW = packet["data"][1]
+                    _CAGridH = packet["data"][2]
                     nah.ingame = true
                 end
 
-                nah.setupPlayers(pckt[4])
+                nah.setupPlayers(packet["data"][3])
 
                 _CAState.change("game")
             end
 
-            if(pckt[1]=="STOP") then
+            if(packet["name"]=="STOP") then
                 nah.clientpeer:disconnect()
                 love.window.showMessageBox("Connection error", "Server closed!", "error")
                 love.event.quit()
             end
-
-            if(pckt[1]=="INGAME") then
-                love.window.showMessageBox("Connection error", "The game you are trying to connect has already started!", "error")
-                love.event.quit()
+            if(packet["name"]=="CLICKON") then
+                nah.gamelogic.clickedTile(packet["data"][1],packet["data"][2])
             end
 		end
     end
@@ -218,9 +255,19 @@ function nah.setupPlayers(value)
     end
 end
 
+function nah.playerListToArray(plyrs)
+    local arr = {}
+    for k,v in ipairs(plyrs) do -- { {...}, {...}, {...}, {...} }
+        for i,p in ipairs(v) do -- {peer,name,ready}
+            table.insert(arr,p)
+        end
+    end
+    return arr
+end
+
 function nah.stopServer()
     nah.enethost:flush()
-    nah.enethost:broadcast("STOP|END")
+    nah.enethost:broadcast(gmpacket.encode("STOP",{}))
     nah.enethost:flush()
     nah.enethost:destroy()
     nah.enethost = nil
