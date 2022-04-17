@@ -1,7 +1,7 @@
 # NAtoms
-A online multiplayer fork for KleleAtoms .
+An online multiplayer fork for KleleAtoms.
 
-This is testing fork for online multiplayer implementation in KleleAtoms using ENet.
+This fork implements online multiplayer to KleleAtoms using ENet thru UDP. To start a server/connect to the game, please refer to "Command line parameters" section.  
 
 (This project is not yet finished. The game is playable but there's a chance that the game might desynchronize.)
 
