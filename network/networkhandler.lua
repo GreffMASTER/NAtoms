@@ -35,14 +35,12 @@ function nah.init()
         _CAState.printmsg("Hosting Server on IP: " .. _NAHostIP, 4)
         nah.enethost = enet.host_create(_NAHostIP, 5)
         if nah.enethost == nil then -- the server could not create a host
-            love.window.showMessageBox("Server Error",
-                "Failed to start the server. Perhaps a server is already running on " .. _NAHostIP .. "?", "error")
+            love.window.showMessageBox("Server Error","Failed to start the server. Perhaps a server is already running on " .. _NAHostIP .. "?", "error")
             love.event.quit()
         end
         nah.enetclient = enet.host_create()
         nah.clientpeer = nah.enetclient:connect(_NAHostIP)
         nah.mode = "Server"
-        love.window.setTitle(love.window.getTitle() .. " - Server")
     elseif _NAServerIP ~= nil then
         print("Connecting to " .. _NAServerIP)
         _CAState.printmsg("Connecting to: " .. _NAServerIP, 40)
@@ -50,6 +48,7 @@ function nah.init()
         nah.clientpeer = nah.enetclient:connect(_NAServerIP)
         nah.mode = "Client"
     end
+    if nah.mode == "Server" then love.window.setTitle(love.window.getTitle() .. " - Server") end
     _NAOnline = true
 end
 
@@ -119,9 +118,19 @@ function nah.ServerThinker(dt)
                     break
                 end
             end
+            if nah.ingame then
+                nah.playersdone[nah.hostevent.peer:index()] = 0
+                if nah.gamelogic.curplayer == nah.hostevent.peer:index() then
+                    local nextp = nah.hostevent.peer:index() + 1
+                    while nah.playersdone[nextp] == 0 do
+                        nextp = nextp + 1
+                        if nextp > 4 then nextp = 1 end
+                    end
+                    nah.enethost:get_peer(nextp):send(gmpacket.encode("YOURMOVE", {}))
+                end
+            end
             nah.enethost:broadcast(gmpacket.encode("PLYRS", nah.playerListToArray(nah.players)))
-            nah.enethost:broadcast(
-                gmpacket.encode("DISCONN", {tostring(nah.hostevent.peer), nah.hostevent.peer:index()}))
+            nah.enethost:broadcast(gmpacket.encode("DISCONN", {tostring(nah.hostevent.peer), nah.hostevent.peer:index()}))
         end
 
         if nah.hostevent.type == "receive" then

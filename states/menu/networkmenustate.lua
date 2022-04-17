@@ -1,5 +1,6 @@
 local networkmenustate = {}
 
+local naicon = love.image.newImageData("graphics/natoms/naicon.png")
 local mbg = love.graphics.newImage("graphics/natoms/m_bgcustom.png")
 local mnalogo = love.graphics.newImage("graphics/natoms/m_nalogo.png")
 local bgcolor = {1, 1, 1, 1}
@@ -42,6 +43,7 @@ local ready = false
 
 function networkmenustate.init()
     love.window.setTitle("NAtoms")
+    love.window.setIcon(naicon)
     if not _NAOnline then -- check if the handler is not elready running
         net.init()
         net.netmenu = netmenu
