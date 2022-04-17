@@ -1,11 +1,12 @@
 local networkmenustate = {}
 
 local mbg = love.graphics.newImage("graphics/natoms/m_bgcustom.png")
-local bgcolor = {1,1,1,1}
+local mnalogo = love.graphics.newImage("graphics/natoms/m_nalogo.png")
+local bgcolor = {1, 1, 1, 1}
 
 local mbgnatoms = love.graphics.newImage("graphics/natoms/bgnatoms.png")
 local curimg = mbgnatoms
-curimg:setWrap( "repeat", "repeat", "repeat" )
+curimg:setWrap("repeat", "repeat", "repeat")
 
 local netmenu = {}
 
@@ -18,24 +19,23 @@ netmenu.images = {
     [5] = love.graphics.newImage("graphics/natoms/bgcount5.png")
 }
 
-function netmenu.setImage(img)
-    curimg = img
-    curimg:setWrap( "repeat", "repeat", "repeat" )
+netmenu.playercolor = {
+    [1] = {1, 0.2, 0.2, 1}, -- red
+    [2] = {0.2, 0.4, 1, 1}, -- blue
+    [3] = {0, 1, 0, 1}, -- green
+    [4] = {1, 1, 0, 1}, -- yellow
+}
+
+function netmenu.setImage(imgindex)
+    curimg = netmenu.images[imgindex]
+    curimg:setWrap("repeat", "repeat", "repeat")
 end
 
 function netmenu.setBgColor(val)
-    if val == 1 then -- red
-        bgcolor = {1,0.2,0.2,1}
-    elseif val == 2 then -- blue
-        bgcolor = {0.2,0.4,1,1}
-    elseif val == 3 then -- green
-        bgcolor = {0,1,0,1}
-    elseif val == 4 then -- yellow
-        bgcolor = {1,1,0,1}
-    end
+    bgcolor = netmenu.playercolor[val]
 end
 
-local mbglayer = love.graphics.newQuad(0,0,640,480,128,128)
+local mbglayer = love.graphics.newQuad(0, 0, 640, 480, 128, 128)
 local bg_spd = 32
 
 local ready = false
@@ -50,68 +50,84 @@ function networkmenustate.init()
         net.ingame = false
         net.waiting = false
     end
-    if(net.mode=="Server") then
+    if net.mode == "Server" then
         -- set background color to gray to tell apart which window is server
-        love.graphics.setBackgroundColor(0.25,0.25,0.25)
+        love.graphics.setBackgroundColor(0.25, 0.25, 0.25)
     end
     local winh = love.graphics.getHeight()
     local winw = love.graphics.getWidth()
-    if winw ~= 640 or winh ~= 480 or _CAOSType == "Web" then return 640,480 end
+    if winw ~= 640 or winh ~= 480 or _CAOSType == "Web" then
+        return 640, 480
+    end
 end
 
 function networkmenustate.update(dt)
+    -- scrolling layer stuff
     local offx, offy = mbglayer:getViewport()
-    if offx<=-128 then offx = 0 end
-    if offy<=-128 then offy = 0 end
-    mbglayer:setViewport(offx-dt*bg_spd,offy-dt*bg_spd,640,480)
+    if offx <= -128 then
+        offx = 0
+    end
+    if offy <= -128 then
+        offy = 0
+    end
+    mbglayer:setViewport(offx - dt * bg_spd, offy - dt * bg_spd, 640, 480)
 
-    -- logic
-    if(net.mode == "Server") then
+    -- server/client logic
+    if net.mode == "Server" then
         net.ServerThinker(dt)
     end
-	net.ClientThinker(dt)
+    net.ClientThinker(dt)
 end
 
 function networkmenustate.draw()
     love.graphics.setColor(bgcolor)
     love.graphics.draw(mbg)
-    love.graphics.setColor(1,1,1,1)
-    love.graphics.draw(curimg,mbglayer)
+    love.graphics.setColor(1, 1, 1, 1)
+    love.graphics.draw(curimg, mbglayer) -- draw scrolling layer
+    love.graphics.draw(mnalogo, 320, -20, 0, 0.75, 0.75)
 
-    for i,p in ipairs(net.players) do
-        if p~=nil then
+    for i, p in ipairs(net.players) do
+        if p ~= nil then
             local youtext = ""
             local readytext = "not ready."
-            if p[1]==net.yourindex then youtext = " <- You" end
-            if p[3] then readytext = "ready." end
-            love.graphics.print("Player "..tostring(p[1])..": "..p[2].." is "..readytext..youtext,10,i*20)
+            if p[1] == net.yourindex then
+                youtext = " <- You"
+            end
+            if p[3] then
+                readytext = "ready."
+            end
+            love.graphics.print("Player " .. tostring(p[1]) .. ": " .. p[2] .. " is " .. readytext .. youtext, 10,
+                i * 20)
         end
     end
 
-	love.graphics.print("Press enter to switch your ready state",10,love.graphics.getHeight()-20)
+    love.graphics.print("Press enter to switch your ready state", 10, love.graphics.getHeight() - 20)
+    love.graphics.print("FPS: " .. love.timer.getFPS(), 0, 0)
 end
 
 function networkmenustate.keypressed(key)
-    if(key == "return") then -- press enter to toggle if ready
-	    ready = not ready
-		if(ready == true) then
-		    net.clientpeer:send(gmpacket.encode("IMREADY",{}))
-		else
-		    net.clientpeer:send(gmpacket.encode("IMNOTREADY",{}))
-		end
+    if (key == "return") then -- press enter to toggle if ready
+        ready = not ready
+        if (ready == true) then
+            net.clientpeer:send(gmpacket.encode("IMREADY", {}))
+        else
+            net.clientpeer:send(gmpacket.encode("IMNOTREADY", {}))
+        end
     end
 end
 
-function networkmenustate.mousepressed(x,y,button)
+function networkmenustate.mousepressed(x, y, button)
 end
 
-function networkmenustate.mousereleased(x,y,button)
+function networkmenustate.mousereleased(x, y, button)
 end
 
 function networkmenustate.quit()
     net.clientpeer:disconnect_now()
-    if(net.mode=="Server") then
-        if net.enethost~=nil then net.stopServer() end
+    if (net.mode == "Server") then
+        if net.enethost ~= nil then
+            net.stopServer()
+        end
     end
 end
 

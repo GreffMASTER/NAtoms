@@ -105,6 +105,10 @@ local function prepareNewAtoms(tx,ty) --Place atom on a tile, prepare for explos
         logic.willexplode = {ttpos[1],ttpos[2],true}
         table.insert(logic.atomstack,ttpos)
     else
+        -- NAtoms
+        if _NAOnline then
+            net.clientpeer:send(gmpacket.encode("DONE",{}))
+        end
         nextPlayer()
     end
 end
@@ -294,6 +298,10 @@ function logic.tick(dt) --Game tick - disqualifies players, picks the winner, ex
                 else
                     table.remove(logic.atomstack)
                     if #logic.atomstack == 0 then
+                        -- NAtoms
+                        if _NAOnline then
+                            net.clientpeer:send(gmpacket.encode("DONE",{}))
+                        end
                         nextPlayer()
                         break
                     end

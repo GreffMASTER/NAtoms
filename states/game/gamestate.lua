@@ -231,9 +231,9 @@ function gamestate.mousepressed(x, y, button)
             if not _NAOnline then
                 gamelogic.clickedTile(pressx,pressy)
             else -- NAtoms
-                if gamelogic.curplayer == net.yourindex then
+                if gamelogic.curplayer == net.yourindex and not net.waiting then
                     net.clientpeer:send(gmpacket.encode("CLICKEDTILE",{pressx,pressy}))
-                    --net.waiting = true -- currently unused
+                    net.waiting = true
                 end
             end
         end
