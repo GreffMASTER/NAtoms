@@ -3,7 +3,7 @@ A online multiplayer fork for KleleAtoms .
 
 This is testing fork for online multiplayer implementation in KleleAtoms using ENet.
 
-(This project is not yet finished. You can play it but it's very raw. There are no currently any net synchronization checks.)
+(This project is not yet finished. The game is playable but there's a chance that the game might desynchronize.)
 
 ## Command line parameters
 `-gw <number>` - change grid width (7-30)  
