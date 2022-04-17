@@ -10,12 +10,23 @@ nah.clientpeer = nil
 nah.mode = nil
 nah.connected = false
 nah.players = {} -- {peer_index, ip, ready}
-nah.countdown = 5
+nah.countdown = 6
 nah.ingame = false
+nah.allready = false
+nah.waiting = false
 
 nah.yourindex = nil
-nah.gamelogic = nil
 nah.prevplayerturn = nil
+
+--hooks
+nah.gamelogic = nil
+nah.netmenu = nil
+
+local function resetPlayersReady(plyrs)
+    for k,v in ipairs(plyrs) do
+        v[3] = false
+    end
+end
 
 function nah.init()
     if(_NAHostIP ~= nil) then
@@ -23,12 +34,13 @@ function nah.init()
         _CAState.printmsg("Hosting Server on IP: ".._NAHostIP,4)
         nah.enethost = enet.host_create(_NAHostIP,4)
         if(nah.enethost==nil) then -- the server could not create a host
-            love.window.showMessageBox("Server Error", "Failed to start the server. Perhaps a server is already running on ".._NAHostIP, "error")
+            love.window.showMessageBox("Server Error", "Failed to start the server. Perhaps a server is already running on ".._NAHostIP.."?", "error")
             love.event.quit()
         end
         nah.enetclient = enet.host_create()
         nah.clientpeer = nah.enetclient:connect(_NAHostIP)
         nah.mode = "Server"
+        love.window.setTitle(love.window.getTitle().." - Server")
     elseif(_NAServerIP ~= nil) then
         print("Connecting to ".._NAServerIP)
         _CAState.printmsg("Connecting to: ".._NAServerIP,30)
@@ -50,9 +62,10 @@ function nah.ServerThinker(dt)
         end
     end
 
-    if(allready and table.getn(nah.players)>1 and nah.ingame == false) then
+    if(allready and #nah.players>1 and nah.ingame == false) then
         if(nah.countdown>0) then
             nah.countdown = nah.countdown - dt
+            nah.allready = true
         end
         -- every time the countdown increments each second, send a message to all players
         if(math.ceil(nah.countdown) ~= math.ceil(nah.countdown-dt)) then
@@ -60,15 +73,17 @@ function nah.ServerThinker(dt)
         end
         if(nah.countdown <= 0) then
             nah.ingame = true
-            nah.countdown = 5
+            nah.countdown = 6
             local calc = 0
             for i=1,#nah.players do
                 calc = calc + 2^(nah.players[i][1]-1)
             end
+            -- reset all players ready state
             nah.enethost:broadcast(gmpacket.encode("START",{_CAGridW,_CAGridH,calc}))
         end
     else
-        nah.countdown = 5
+        nah.countdown = 6
+        nah.allready = false
     end
 	
 	if nah.hostevent then
@@ -93,9 +108,8 @@ function nah.ServerThinker(dt)
                     break
                 end
             end
-
             nah.enethost:broadcast(gmpacket.encode("PLYRS",nah.playerListToArray(nah.players)))
-            nah.enethost:broadcast(gmpacket.encode("DISCONN",{tostring(nah.hostevent.peer)}))
+            nah.enethost:broadcast(gmpacket.encode("DISCONN",{tostring(nah.hostevent.peer),nah.hostevent.peer:index()}))
         end
 		if nah.hostevent.type == "receive" then
 			print("Server received message: ", nah.hostevent.data, nah.hostevent.peer)
@@ -124,19 +138,11 @@ function nah.ServerThinker(dt)
             end
 
             if(packet["name"]=="CLICKEDTILE") then
-
-                local playerturn = nah.gamelogic.curplayer
-
-                if(nah.hostevent.peer:index()==1) then
-                    playerturn = nah.prevplayerturn
-                end
-
                 print("Player "..nah.hostevent.peer:index().." wants to click tile "..packet["data"][1]..","..packet["data"][2])
-                print("Turn for player "..playerturn)
-                if(nah.hostevent.peer:index()==playerturn) then
-                    nah.enethost:broadcast(gmpacket.encode("CLICKON",{packet["data"][1],packet["data"][2]}))
+                print("Turn for player "..nah.gamelogic.curplayer)
+                if(nah.hostevent.peer:index()==nah.gamelogic.curplayer) then
+                    nah.enethost:broadcast(gmpacket.encode("CLICKON",{packet["data"][1],packet["data"][2],nah.hostevent.peer:index()}))
                 else
-                    nah.hostevent.peer:disconnect_now()
                     print("ILLEGAL MOVE!!!")
                 end
             end
@@ -186,25 +192,42 @@ function nah.ClientThinker(dt)
 
             if(packet["name"]=="INDEX") then
                 nah.yourindex = packet["data"][1]
+                nah.netmenu.setBgColor(nah.yourindex)
             end
 
 			if(packet["name"]=="CONN") then
 			    _CAState.printmsg(packet["data"][1].." connected to the game.",4)
+                if not nah.ingame  then
+                    nah.netmenu.setImage(nah.netmenu.images[0])
+                end
 			end
 
 			if(packet["name"]=="DISCONN")then
 			    _CAState.printmsg(packet["data"][1].." disconnected from the game.",4)
+                if not nah.ingame  then
+                    nah.netmenu.setImage(nah.netmenu.images[0])
+                else
+                    nah.gamelogic.playertab[packet["data"][2]] = false
+                    nah.gamelogic.players = nah.gamelogic.players - 1
+                    if(nah.gamelogic.curplayer==packet["data"][2]) then
+                        nah.gamelogic.nextPlayer()
+                    end
+                end
 			end
 
 			if(packet["name"]=="READY") then
-			    if(packet["data"][2]==true) then
-			        _CAState.printmsg(packet["data"][1].." is ready.",4)
-				elseif(packet["data"][2]==false) then
-				    _CAState.printmsg(packet["data"][1].." is not ready.",4)
-			    end
+                if not nah.ingame then
+                    if(packet["data"][2]==true) then
+                        _CAState.printmsg(packet["data"][1].." is ready.",4)
+                    elseif(packet["data"][2]==false) then
+                        _CAState.printmsg(packet["data"][1].." is not ready.",4)
+                    end
+                    nah.netmenu.setImage(nah.netmenu.images[0])
+                end
 			end
 
             if(packet["name"]=="COUNTING") then
+                nah.netmenu.setImage(nah.netmenu.images[packet["data"][1]])
                 _CAState.printmsg("Game starting in "..packet["data"][1].." second(s).",1)
             end
 
@@ -216,7 +239,7 @@ function nah.ClientThinker(dt)
                 end
 
                 nah.setupPlayers(packet["data"][3])
-
+                resetPlayersReady(nah.players)
                 _CAState.change("game")
             end
 
@@ -226,6 +249,10 @@ function nah.ClientThinker(dt)
                 love.event.quit()
             end
             if(packet["name"]=="CLICKON") then
+                nah.prevplayerturn = nah.gamelogic.curplayer
+                if(packet["data"][3]~=nah.yourindex) then
+                    nah.hold = false
+                end
                 nah.gamelogic.clickedTile(packet["data"][1],packet["data"][2])
             end
 		end

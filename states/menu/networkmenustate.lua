@@ -1,16 +1,71 @@
 local networkmenustate = {}
 
+local mbg = love.graphics.newImage("graphics/natoms/m_bgcustom.png")
+local bgcolor = {1,1,1,1}
+
+local mbgnatoms = love.graphics.newImage("graphics/natoms/bgnatoms.png")
+local curimg = mbgnatoms
+curimg:setWrap( "repeat", "repeat", "repeat" )
+
+local netmenu = {}
+
+netmenu.images = {
+    [0] = love.graphics.newImage("graphics/natoms/bgnatoms.png"),
+    [1] = love.graphics.newImage("graphics/natoms/bgcount1.png"),
+    [2] = love.graphics.newImage("graphics/natoms/bgcount2.png"),
+    [3] = love.graphics.newImage("graphics/natoms/bgcount3.png"),
+    [4] = love.graphics.newImage("graphics/natoms/bgcount4.png"),
+    [5] = love.graphics.newImage("graphics/natoms/bgcount5.png")
+}
+
+function netmenu.setImage(img)
+    curimg = img
+    curimg:setWrap( "repeat", "repeat", "repeat" )
+end
+
+function netmenu.setBgColor(val)
+    if val == 1 then -- red
+        bgcolor = {1,0.2,0.2,1}
+    elseif val == 2 then -- blue
+        bgcolor = {0.2,0.4,1,1}
+    elseif val == 3 then -- green
+        bgcolor = {0,1,0,1}
+    elseif val == 4 then -- yellow
+        bgcolor = {1,1,0,1}
+    end
+end
+
+local mbglayer = love.graphics.newQuad(0,0,640,480,128,128)
+local bg_spd = 32
+
 local ready = false
 
 function networkmenustate.init()
-    net.init()
+    love.window.setTitle("NAtoms")
+    if not _NAOnline then -- check if the handler is not elready running
+        net.init()
+        net.netmenu = netmenu
+    else
+        ready = false
+        net.ingame = false
+        net.waiting = false
+    end
     if(net.mode=="Server") then
         -- set background color to gray to tell apart which window is server
         love.graphics.setBackgroundColor(0.25,0.25,0.25)
     end
+    local winh = love.graphics.getHeight()
+    local winw = love.graphics.getWidth()
+    if winw ~= 640 or winh ~= 480 or _CAOSType == "Web" then return 640,480 end
 end
 
 function networkmenustate.update(dt)
+    local offx, offy = mbglayer:getViewport()
+    if offx<=-128 then offx = 0 end
+    if offy<=-128 then offy = 0 end
+    mbglayer:setViewport(offx-dt*bg_spd,offy-dt*bg_spd,640,480)
+
+    -- logic
     if(net.mode == "Server") then
         net.ServerThinker(dt)
     end
@@ -18,10 +73,18 @@ function networkmenustate.update(dt)
 end
 
 function networkmenustate.draw()
-    -- draw player list
+    love.graphics.setColor(bgcolor)
+    love.graphics.draw(mbg)
+    love.graphics.setColor(1,1,1,1)
+    love.graphics.draw(curimg,mbglayer)
+
     for i,p in ipairs(net.players) do
-        if(p~=nil) then
-            love.graphics.print("Player "..tostring(p[1])..": "..p[2].." "..tostring(p[3]),10,i*20)
+        if p~=nil then
+            local youtext = ""
+            local readytext = "not ready."
+            if p[1]==net.yourindex then youtext = " <- You" end
+            if p[3] then readytext = "ready." end
+            love.graphics.print("Player "..tostring(p[1])..": "..p[2].." is "..readytext..youtext,10,i*20)
         end
     end
 
@@ -48,7 +111,7 @@ end
 function networkmenustate.quit()
     net.clientpeer:disconnect_now()
     if(net.mode=="Server") then
-        net.stopServer()
+        if net.enethost~=nil then net.stopServer() end
     end
 end
 

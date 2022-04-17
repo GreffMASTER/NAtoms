@@ -9,6 +9,8 @@ local cplayer = love.graphics.newImage("graphics/player.png")
 local cplayerai = love.graphics.newImage("graphics/playerai.png") --AI player sprite (without bars)
 
 local cplayerai2 = love.graphics.newImage("graphics/playerai2.png") --AI difficulty bars
+-- NAtoms
+local hourglass = love.graphics.newImage("graphics/natoms/hourglass.png")
 
 local ailevelquads = { --Quads for drawing only a part of cplayerai2 texture depending on AI difficulty
     love.graphics.newQuad(0,0,10,50,cplayerai2:getDimensions()), --Easy (AI 1)
@@ -64,11 +66,12 @@ function gamestate.init(laststate,argtab)
         gametut.init(gamelogic)
     else
         gamelogic.loadAll(_CAGridW,_CAGridH,{_CAPlayer1,_CAPlayer2,_CAPlayer3,_CAPlayer4})
-        if(_NAOnline==false) then ttime = gamelogic.loadGame() end
+        if not _NAOnline then ttime = gamelogic.loadGame() end
     end
     if ttime then restarttime = ttime; _CAState.printmsg("Saved game loaded.",2) end
-    if(_NAOnline==true) then
+    if _NAOnline then
         net.gamelogic = gamelogic
+        net.prevplayerturn = gamelogic.curplayer
     end
     return gamelogic.winsize[1],gamelogic.winsize[2]
 end
@@ -86,8 +89,8 @@ function gamestate.update(dt)
         gamelogic.tick(dt)
     end
     -- NAtoms
-    if(_NAOnline) then
-        if(net.mode == "Server") then
+    if _NAOnline then
+        if net.mode == "Server" then
             net.ServerThinker(dt)
         end
 	    net.ClientThinker(dt)
@@ -171,6 +174,12 @@ function gamestate.draw() --Draw all stuff, move animated atoms and calculate at
             end
         end
     end
+    if _NAOnline then -- NAtoms
+        if net.waiting then
+            love.graphics.setColor(1,1,1,1)
+            love.graphics.draw(hourglass)
+        end
+    end
     if gamelogic.playerwon ~= 0 then 
         gamelogic.drawVictoryWin(getGameTime())
         return
@@ -178,16 +187,22 @@ function gamestate.draw() --Draw all stuff, move animated atoms and calculate at
     love.graphics.setColor(1,1,1,1)
     love.graphics.printf(getGameTime(),_CAFont16,0,0,gamelogic.winsize[1]-2,"right")
     if tutorial then gametut.draw() end
-    love.graphics.draw(cback,2,2)
+    if not _NAOnline then 
+        love.graphics.draw(cback,2,2)
+    end
     if gamelogic.paused then gamepause.draw() end
 end
 
 function gamestate.keyreleased(key)
     if restarttime >= 0.3 then
         if key == "m" then
-            _CAState.change("menu")
+            if not _NAOnline then
+                _CAState.change("menu")
+            end
         elseif key == "escape" and gamestate.playerwon == 0 and not gamelogic.paused then
-            pauseGame()
+            if not _NAOnline then
+                pauseGame()
+            end
         end
     end
     if tutorial then gametut.keyreleased(key) end
@@ -198,7 +213,13 @@ function gamestate.mousepressed(x, y, button)
     local gw = #gamelogic.grid
     local gh = #gamelogic.grid[1]
     if gamelogic.playerwon ~= 0 or (x >= 0 and x <= 44 and y <= 44) then
-        exiting = button
+        if not _NAOnline then
+            exiting = button
+        else
+            if gamelogic.playerwon ~= 0 then
+                exiting = button
+            end
+        end
     else
         if tutorial and gametut.mousepressed(x,y,button) then 
             return
@@ -207,13 +228,12 @@ function gamestate.mousepressed(x, y, button)
         elseif x >= 10 and x < 10+gw*gamelogic.cGRIDSIZE and y >= 90 and y < 90+gh*gamelogic.cGRIDSIZE then
             local pressx = math.floor((x-10)/gamelogic.cGRIDSIZE)+1
             local pressy = math.floor((y-90)/gamelogic.cGRIDSIZE)+1
-            if(_NAOnline==false) then
+            if not _NAOnline then
                 gamelogic.clickedTile(pressx,pressy)
             else -- NAtoms
-                if(gamelogic.curplayer==net.yourindex) then
-                    net.prevplayerturn = gamelogic.curplayer
-                    gamelogic.clickedTile(pressx,pressy)
+                if gamelogic.curplayer == net.yourindex then
                     net.clientpeer:send(gmpacket.encode("CLICKEDTILE",{pressx,pressy}))
+                    --net.waiting = true -- currently unused
                 end
             end
         end
@@ -230,7 +250,11 @@ function gamestate.mousereleased(x,y,button)
             exiting = nil
             pauseGame()
         else
-            _CAState.change("menu")
+            if not _NAOnline then
+                _CAState.change("menu")
+            else
+                _CAState.change("netmenu")
+            end
         end
     end
 end
