@@ -16,8 +16,13 @@ This fork implements online multiplayer to KleleAtoms using ENet thru UDP. To st
 `-mobile` - simulate mobile/web mode (fullscreen, limited grid size etc.)  
 `-port` - set server port (default 5047)  
 `-host <ip>` - host a multiplayer game (no menu)  
+<<<<<<< HEAD
 `-connect <ip>` - connect to a multiplayer game (no menu)  
 `-nick <name>` - set your ingame nick (default "Guest")  
+=======
+`-nick <name>` - set your ingame nick (default "Guest")  
+`-connect <ip>` - connect to a multiplayer game (no menu)  
+>>>>>>> 4a93ad568766432b264202dbec4cecdf89a57133
 `-os <name>` - spoof the target OS (`-os Web` simulates HTML5 love.js version)
 
 ## Credits  
