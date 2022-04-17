@@ -41,7 +41,7 @@ local function checkSetValues() --Checks if values are in a valid range
 end
 
 local function readArgs(args)
-    local valmode = 0 --0 - nothing, 1 - grid width, 2 - grid height, 3 - AI difficulty, 4-7 - Player types, 8 - Host IP, 9 - Server IP, 100 - OS type
+    local valmode = 0 --0 - nothing, 1 - grid width, 2 - grid height, 3 - AI difficulty, 4-7 - Player types, 96 - Port, 97 - Host IP, 98 - Connect IP, 99 - Player Nick, 100 - OS type
     for k,v in ipairs(args) do
         if valmode == 0 then
             if v == "-gridwidth" or v == "-gw" then
