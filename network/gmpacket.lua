@@ -88,6 +88,10 @@ function gmpacket.decode(str)
         return nil
     end
 
+    if not string.find(str,gmpacket.sep) then
+        return nil
+    end
+
     local data = string.explode(str,gmpacket.sep)
     local packetdata = {
         name = data[1],

@@ -266,6 +266,12 @@ function logic.tick(dt) --Game tick - disqualifies players, picks the winner, ex
             if logic.playertab[i] and v <= 0 and logic.playermoved[i] then
                 logic.players = logic.players - 1
                 logic.playertab[i] = false
+                -- NAtoms
+                if _NAOnline then
+                    if i == net.yourindex then
+                        net.disqualified = true
+                    end
+                end
             end
         end
     end

@@ -55,10 +55,14 @@ local function readArgs(args)
                 end
             elseif v == "-mobilemode" or v == "-mobile" then
                 _CAIsMobile = true
+            elseif v == "-port" then
+                valmode = 96
             elseif v == "-host" then
-                valmode = 8
+                valmode = 97
             elseif v == "-connect" then
-                valmode = 9
+                valmode = 98
+            elseif v == "-nick" then
+                valmode = 99
             elseif v == "-forceos" or v == "-os" then
                 valmode = 100
             elseif v == "-kbmode" then --Keyboard mode (adds virtual mouse controlled by keyboard)
@@ -68,11 +72,17 @@ local function readArgs(args)
             local index = settsvals[valmode]
             _G[index] = tonumber(v) or _G[index]
             valmode = 0
-        elseif valmode == 8 then
+        elseif valmode == 96 then -- -port <port>
+            _NAPort = v
+            valmode = 0
+        elseif valmode == 97 then -- -host <ip>
             _NAHostIP = v
             valmode = 0
-        elseif valmode == 9 then
+        elseif valmode == 98 then -- -connect <ip>
             _NAServerIP = v
+            valmode = 0
+        elseif valmode == 99 then -- nick <name>
+            _NAPlayerNick = v
             valmode = 0
         elseif valmode == 100 then --Force OS type
             _CAOSType = v
@@ -145,6 +155,8 @@ function love.load(args)
     _NAOnline = false --If game is in online mode
     _NAHostIP = nil --IP address and port of host
     _NAServerIP = nil --IP address and port of server
+    _NAPort = "5047" --Port number
+    _NAPlayerNick = "Guest" --Player nickname
     loadSettings()
     readArgs(args) --Read commandline parameters
     checkSetValues() --Make sure the settings are within the acceptable range

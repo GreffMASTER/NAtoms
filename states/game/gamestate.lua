@@ -12,6 +12,8 @@ local cplayerai2 = love.graphics.newImage("graphics/playerai2.png") --AI difficu
 -- NAtoms
 local hourglass = love.graphics.newImage("graphics/natoms/hourglass.png")
 
+local eye = love.graphics.newImage("graphics/natoms/eye.png")
+
 local ailevelquads = { --Quads for drawing only a part of cplayerai2 texture depending on AI difficulty
     love.graphics.newQuad(0,0,10,50,cplayerai2:getDimensions()), --Easy (AI 1)
     love.graphics.newQuad(0,0,14,50,cplayerai2:getDimensions()), --Medium (AI 2)
@@ -175,9 +177,14 @@ function gamestate.draw() --Draw all stuff, move animated atoms and calculate at
         end
     end
     if _NAOnline then -- NAtoms
-        if net.waiting then
-            love.graphics.setColor(1,1,1,1)
-            love.graphics.draw(hourglass)
+        love.graphics.setColor(1,1,1,1)
+        if net.disqualified then
+            love.graphics.draw(eye)
+        else
+            if net.waiting then
+                love.graphics.setColor(1,1,1,1)
+                love.graphics.draw(hourglass)
+            end
         end
     end
     if gamelogic.playerwon ~= 0 then 
@@ -231,7 +238,7 @@ function gamestate.mousepressed(x, y, button)
             if not _NAOnline then
                 gamelogic.clickedTile(pressx,pressy)
             else -- NAtoms
-                if gamelogic.curplayer == net.yourindex and not net.waiting then
+                if gamelogic.curplayer == net.yourindex and not net.waiting and not net.disqualified then
                     net.clientpeer:send(gmpacket.encode("CLICKEDTILE",{pressx,pressy}))
                     net.waiting = true
                 end

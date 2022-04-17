@@ -1,1 +1,1 @@
-lovec . -connect localhost:5047
+lovec . -connect localhost -nick Zdzichu

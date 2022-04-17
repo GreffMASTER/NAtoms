@@ -51,6 +51,7 @@ function networkmenustate.init()
         ready = false
         net.ingame = false
         net.waiting = false
+        net.disqualified = false
     end
     if net.mode == "Server" then
         -- set background color to gray to tell apart which window is server
@@ -98,8 +99,7 @@ function networkmenustate.draw()
             if p[3] then
                 readytext = "ready."
             end
-            love.graphics.print("Player " .. tostring(p[1]) .. ": " .. p[2] .. " is " .. readytext .. youtext, 10,
-                i * 20)
+            love.graphics.print("Player " .. tostring(p[1]) .. ": " .. p[2] .. " is " .. readytext .. youtext, 10, i * 20)
         end
     end
 
