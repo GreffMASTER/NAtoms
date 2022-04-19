@@ -112,7 +112,7 @@ function nah.ServerThinker(dt)
         end
     end
     
-    if nah.hostevent then
+    while nah.hostevent do
         print("Server detected message type: " .. nah.hostevent.type)
 
         if nah.hostevent.type == "connect" then
@@ -222,6 +222,7 @@ function nah.ServerThinker(dt)
                 end
             end
         end
+        nah.hostevent = nah.enethost:service()
     end
 end
 
@@ -229,7 +230,7 @@ function nah.ClientThinker(dt)
 
     nah.clientevent = nah.enetclient:service(1)
 
-    if nah.clientevent then
+    while nah.clientevent do
         print("Client detected message type: " .. nah.clientevent.type)
 
         if nah.clientevent.type == "connect" then
@@ -345,6 +346,7 @@ function nah.ClientThinker(dt)
                 end
             end
         end
+        nah.clientevent = nah.enetclient:service()
     end
 end
 
