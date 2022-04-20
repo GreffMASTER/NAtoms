@@ -1,5 +1,6 @@
 # NAtoms
-An online multiplayer fork for KleleAtoms.
+An online multiplayer fork for KleleAtoms.  
+![Tux, the Linux mascot](https://user-images.githubusercontent.com/72660447/121074985-e68e1f00-c7d4-11eb-83bc-7d3b8512b8ef.png)  
 
 This fork implements online multiplayer to KleleAtoms using ENet thru UDP. To start a server/connect to the game, please refer to "Command line parameters" section.  
 
