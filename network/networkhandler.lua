@@ -302,8 +302,10 @@ function nah.ClientThinker(dt)
                     if not nah.ingame then
                         nah.netmenu.setImage(0)
                     else
-                        nah.gamelogic.playertab[packet["data"][2]] = false
-                        nah.gamelogic.players = nah.gamelogic.players - 1
+                        if nah.gamelogic.playertab[packet["data"][2]] then
+                            nah.gamelogic.playertab[packet["data"][2]] = false
+                            nah.gamelogic.players = nah.gamelogic.players - 1
+                        end
                     end
                 end
 
