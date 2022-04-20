@@ -36,7 +36,6 @@ end
 
 local function addPlayerToPlayerList(p,nick)
     table.insert(nah.players, p:index(), {p:index(), nick, false})
-    p:send(gmpacket.encode("INDEX", {p:index()}))
     nah.enethost:broadcast(gmpacket.encode("PLYRS", nah.playerListToArray(nah.players)))
     nah.enethost:broadcast(gmpacket.encode("CONN", {nick}))
 end
@@ -60,7 +59,6 @@ function nah.init()
         nah.clientpeer = nah.enetclient:connect(_NAServerIP..":".._NAPort)
         nah.mode = "Client"
     end
-    if nah.mode == "Server" then love.window.setTitle(love.window.getTitle() .. " - Server") end
     _NAOnline = true
 end
 
@@ -122,10 +120,11 @@ function nah.ServerThinker(dt)
 
         if nah.hostevent.type == "disconnect" then
             print(nah.hostevent.peer, "disconnected.")
-            local pnick = nah.players[nah.hostevent.peer:index()][2]
+            local pnick
             -- find player with id of peer index
             for i, v in pairs(nah.players) do
                 if v[1] == nah.hostevent.peer:index() then
+                    pnick = v[2]
                     table.remove(nah.players, i)
                     break
                 end
@@ -163,13 +162,13 @@ function nah.ServerThinker(dt)
                             end
                         end
                         
-                        print("Player " .. packet["data"][2] .. " authenticated.")
-                        nah.hostevent.peer:send(gmpacket.encode("COOLANDGOOD", {}))
                         if #nah.players>=4 then
                             nah.hostevent.peer:disconnect_now(9)
                         else
                             if not nah.ingame then
+                                print("Player " .. packet["data"][2] .. " authenticated.")
                                 addPlayerToPlayerList(nah.hostevent.peer,packet["data"][2])
+                                nah.hostevent.peer:send(gmpacket.encode("COOLANDGOOD", {nah.hostevent.peer:index()}))
                             else
                                 nah.hostevent.peer:disconnect_now(10)
                             end
@@ -178,24 +177,30 @@ function nah.ServerThinker(dt)
                 end
 
                 if packet["name"] == "IMREADY" then
+                    local plyrnick
                     for i, p in ipairs(nah.players) do
                         if p[1] == nah.hostevent.peer:index() then
+                            plyrnick = p[2]
                             nah.players[i][3] = true
                             break
                         end
                     end
-                    nah.enethost:broadcast(gmpacket.encode("READY", {nah.players[nah.hostevent.peer:index()][2], true}))
+
+                    nah.enethost:broadcast(gmpacket.encode("READY", {plyrnick, true}))
                     nah.enethost:broadcast(gmpacket.encode("PLYRS", nah.playerListToArray(nah.players)))
                 end
 
                 if packet["name"] == "IMNOTREADY" then
+                    local plyrnick
                     for i, p in ipairs(nah.players) do
                         if (p[1] == nah.hostevent.peer:index()) then
+                            plyrnick = p[2]
                             nah.players[i][3] = false
                             break
                         end
                     end
-                    nah.enethost:broadcast(gmpacket.encode("READY", {nah.players[nah.hostevent.peer:index()][2], false}))
+
+                    nah.enethost:broadcast(gmpacket.encode("READY", {plyrnick, false}))
                     nah.enethost:broadcast(gmpacket.encode("PLYRS", nah.playerListToArray(nah.players)))
                 end
 
@@ -243,16 +248,16 @@ function nah.ClientThinker(dt)
             if not nah.connected then
                 if nah.clientevent.data == 99 then
                     love.window.showMessageBox("Connection error", "The server is running on a different version. Consider updating your game.", "error")
+                elseif nah.clientevent.data == 9 then
+                    love.window.showMessageBox("Connection error", "Server full.", "error")
+                elseif nah.clientevent.data == 10 then
+                    love.window.showMessageBox("Connection error", "The game has already started. Please try again later.", "error")
                 else
                     love.window.showMessageBox("Connection error", "Could not connect to the server.", "error")
                 end
             else
                 if nah.clientevent.data == 100 then
                     love.window.showMessageBox("Connection error", "Server closed!", "error")
-                elseif nah.clientevent.data == 9 then
-                    love.window.showMessageBox("Connection error", "Server full.", "error")
-                elseif nah.clientevent.data == 10 then
-                    love.window.showMessageBox("Connection error", "The game has already started. Please try again later.", "error")
                 else
                     love.window.showMessageBox("Connection error", "Disconnected from server. ("..nah.clientevent.data..")", "error")
                 end
@@ -267,6 +272,8 @@ function nah.ClientThinker(dt)
             if packet then
                 if packet["name"] == "COOLANDGOOD" then
                     nah.connected = true
+                    nah.yourindex = packet["data"][1]
+                    nah.netmenu.setBgColor(nah.yourindex)
                     _CAState.printmsg("Successfully connected to the game.", 4)
                 end
 
@@ -281,11 +288,6 @@ function nah.ClientThinker(dt)
                         end
                         nah.players = playerdata
                     end
-                end
-
-                if packet["name"] == "INDEX" then
-                    nah.yourindex = packet["data"][1]
-                    nah.netmenu.setBgColor(nah.yourindex)
                 end
 
                 if packet["name"] == "CONN" then

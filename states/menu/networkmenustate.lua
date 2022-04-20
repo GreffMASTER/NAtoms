@@ -44,6 +44,7 @@ local ready = false
 function networkmenustate.init()
     love.window.setTitle("NAtoms")
     love.window.setIcon(naicon)
+    curimg = mbgnatoms
     if not _NAOnline then -- check if the handler is not elready running
         net.init()
         net.netmenu = netmenu
@@ -54,8 +55,7 @@ function networkmenustate.init()
         net.disqualified = false
     end
     if net.mode == "Server" then
-        -- set background color to gray to tell apart which window is server
-        love.graphics.setBackgroundColor(0.25, 0.25, 0.25)
+        love.window.setTitle(love.window.getTitle() .. " - Server")
     end
     local winh = love.graphics.getHeight()
     local winw = love.graphics.getWidth()
