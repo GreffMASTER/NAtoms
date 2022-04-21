@@ -103,7 +103,12 @@ function networkmenustate.draw()
         end
     end
 
-    love.graphics.print("Press enter to switch your ready state", 10, love.graphics.getHeight() - 20)
+    if _CAIsMobile then
+        local wx,wy = _CAState.getWindowSize()
+        love.graphics.print("Touch the screen to switch your ready state", 10, wy - 20)
+    else
+        love.graphics.print("Press enter to switch your ready state", 10, love.graphics.getHeight() - 20)
+    end
     love.graphics.print("FPS: " .. love.timer.getFPS(), 0, 0)
 end
 
@@ -119,6 +124,14 @@ function networkmenustate.keypressed(key)
 end
 
 function networkmenustate.mousepressed(x, y, button)
+    if _CAIsMobile then
+        ready = not ready
+        if (ready == true) then
+            net.clientpeer:send(gmpacket.encode("IMREADY", {}))
+        else
+            net.clientpeer:send(gmpacket.encode("IMNOTREADY", {}))
+        end
+    end
 end
 
 function networkmenustate.mousereleased(x, y, button)
