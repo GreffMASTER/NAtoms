@@ -27,22 +27,22 @@ local sndclick = nil
 
 local function hostfunc()
     net.mode = "Server"
+    menuonline.saveData()
     _NAHostIP = "localhost"
     _NAServerIP = nil
     _NAPort = textboxes[2].input
     _NAPlayerNick = textboxes[3].input
-    menuonline.saveData()
     _CAState.change("netmenu")
 end
 
 local function joinfunc()
     if textboxes[1].input ~= "" then
         net.mode = "Client"
+        menuonline.saveData()
         _NAHostIP = nil
         _NAServerIP = textboxes[1].input
         _NAPort = textboxes[2].input
         _NAPlayerNick = textboxes[3].input
-        menuonline.saveData()
         _CAState.change("netmenu")
     else
         _CAState.printmsg("Server IP must not be empty to join!",4)
@@ -70,9 +70,18 @@ local function drawRectOutline(x,y,w,h,colbg,colout)
     love.graphics.rectangle("fill",x,y,w,h)
 end
 
+local function deselectTextbox()
+    local tnum = math.floor(tonumber(textboxes[2].input) or 5047)
+    tnum = math.min(math.max(tnum, 1025), 49150)
+    textboxes[2].input = tostring(tnum)
+    selTB = nil
+    love.keyboard.setTextInput(false)
+end
+
 menuonline.isEnabled = false
 
 function menuonline.saveData()
+    deselectTextbox()
     local str = ""
     for k,v in ipairs(textboxes) do
         str = str..v.input.."\n"
@@ -82,7 +91,7 @@ end
 
 function menuonline.init(scl)
     sndclick = scl
-    selTB = nil
+    deselectTextbox()
     isBackSpace = false
     textboxes[1].input = _NAServerIP or ""
     textboxes[2].input = _NAPort or "5047"
@@ -144,7 +153,7 @@ function menuonline.draw()
 end
 
 function menuonline.keypressed(key)
-    if key == "backspace" then
+    if selTB and key == "backspace" then
         textboxes[selTB]:eraselast()
         isBackSpace = true
         bpTimer = -0.15
@@ -155,6 +164,8 @@ function menuonline.keyreleased(key)
     if key == "backspace" then
         isBackSpace = false
         bpTimer = 0.0
+    elseif selTB and key == "return" then
+        deselectTextbox()
     end
 end
 
@@ -172,26 +183,22 @@ function menuonline.mousereleased(x,y,button)
         mobuttons[buttonpressed][6]()
         buttonpressed = nil
     else
-        local newSelect = false
         for k,v in ipairs(tbpos) do
             if x >= v[1] and x <= v[3] and y >= v[2] and y <= v[4] then
-                selTB = k
-                newSelect = true
+                if k ~= selTB then
+                    deselectTextbox()
+                    selTB = k
+                    if selTB then love.keyboard.setTextInput(true,v[1],v[2],v[3]-v[1],v[4]-v[2]) end
+                end
                 break
             end
         end
-        if not newSelect then selTB = nil end
     end
 end
 
 function menuonline.textinput(t)
     if selTB and textboxes[selTB] and not string.find(t,"%c") then
         textboxes[selTB]:write(t)
-        if selTB == 2 then
-            local tnum = math.floor(tonumber(textboxes[selTB].input) or 5047)
-            tnum = math.min(math.max(tnum, 1025), 49150)
-            textboxes[selTB].input = tostring(tnum)
-        end
     end
 end
 

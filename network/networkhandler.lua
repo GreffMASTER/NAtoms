@@ -44,7 +44,11 @@ function nah.init()
     if _NAHostIP ~= nil then
         print("Initiating on " .. _NAHostIP..":".._NAPort)
         _CAState.printmsg("Hosting Server on IP: " .. _NAHostIP..":".._NAPort, 4)
-        nah.enethost = enet.host_create(_NAHostIP..":".._NAPort, 5)
+        if _NAHostIP == "localhost" then
+            nah.enethost = enet.host_create("*:".._NAPort, 5)
+        else
+            nah.enethost = enet.host_create(_NAHostIP..":".._NAPort, 5)
+        end
         if nah.enethost == nil then -- the server could not create a host
             love.window.showMessageBox("Server Error","Failed to start the server. Perhaps a server is already running on " .. _NAHostIP .. "?", "error")
             love.event.quit()

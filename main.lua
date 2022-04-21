@@ -160,7 +160,7 @@ local function loadSettings()
     if love.filesystem.getInfo("natoms.txt") then
         local lnum = 1
         for line in love.filesystem.lines("natoms.txt") do
-            if _G[nasettsvals[lnum]] then
+            if nasettsvals[lnum] then
                 _G[nasettsvals[lnum]] = line
             end
             lnum = lnum + 1
