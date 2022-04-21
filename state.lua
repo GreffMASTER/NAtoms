@@ -82,6 +82,12 @@ function state.mousereleased(x, y, button)
     end
 end
 
+function state.textinput(text)
+    if curstatedata and curstatedata.textinput then
+        curstatedata.textinput(text)
+    end
+end
+
 function state.focus(focus) --Window focus callback function
     if curstatedata and curstatedata.focus then
         curstatedata.focus(focus)

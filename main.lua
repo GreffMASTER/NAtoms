@@ -10,6 +10,12 @@ local settsvals = { --A table to convert settings2.txt line number to a setting 
     "_CAPlayer4"
 }
 
+local nasettsvals = { --A table to convert natoms.txt line number to a setting name
+    "_NAServerIP",
+    "_NAPort",
+    "_NAPlayerNick"
+}
+
 local function checkValidPlayers() --Makes sure that at least 2 players are present
     local pc = 0
     for i = 4,7 do
@@ -29,6 +35,19 @@ local function checkValidPlayers() --Makes sure that at least 2 players are pres
     end
 end
 
+local function checkValidNetOptions() --Checks if net (NAtoms) settings are valid
+    if _NAHostIP then
+        _NAHostIP = _NAHostIP:gsub("%c",""):sub(1,24)
+    end
+    if _NAServerIP then
+        _NAServerIP = _NAServerIP:gsub("%c",""):sub(1,24)
+    end
+    local tnum = math.floor(tonumber(_NAPort) or 5047)
+    tnum = math.min(math.max(tnum, 1025), 49150)
+    _NAPort = tostring(tnum)
+    _NAPlayerNick = _NAPlayerNick:gsub("%c","")
+end
+
 local function checkSetValues() --Checks if values are in a valid range
     _CAGridW = math.max(math.min(_CAGridW, 30), 7)
     _CAGridH = math.max(math.min(_CAGridH, 20), 4)
@@ -38,6 +57,7 @@ local function checkSetValues() --Checks if values are in a valid range
     _CAPlayer3 = math.max(math.min(_CAPlayer3, 4), 0)
     _CAPlayer4 = math.max(math.min(_CAPlayer4, 4), 0)
     checkValidPlayers()
+    checkValidNetOptions()
 end
 
 local function readArgs(args)
@@ -76,9 +96,11 @@ local function readArgs(args)
             _NAPort = v
             valmode = 0
         elseif valmode == 97 then -- -host <ip>
+            _NAArgsUsed = true
             _NAHostIP = v
             valmode = 0
         elseif valmode == 98 then -- -connect <ip>
+            _NAArgsUsed = true
             _NAServerIP = v
             valmode = 0
         elseif valmode == 99 then -- nick <name>
@@ -135,10 +157,20 @@ local function loadSettings()
         end
         _CAState.printmsg("Converted old settings to 1.2+ format!",4)
     end
+    if love.filesystem.getInfo("natoms.txt") then
+        local lnum = 1
+        for line in love.filesystem.lines("natoms.txt") do
+            if _G[nasettsvals[lnum]] then
+                _G[nasettsvals[lnum]] = line
+            end
+            lnum = lnum + 1
+        end
+    end
 end
 
 function love.load(args)
     love.graphics.setDefaultFilter("linear","linear",0)
+    _NATextBox = require("textbox")
     _CAFont16 = love.graphics.newFont(16) --Default font, size 16
     _CAFont24 = love.graphics.newFont(24) --Default font, size 24
     _CAFont32 = love.graphics.newFont(32) --Default font, size 32
@@ -153,26 +185,21 @@ function love.load(args)
     _CAIsMobile = (_CAOSType == "Android" or _CAOSType == "iOS" or _CAOSType == "Web") --If true, mobile mode will be enabled
     _CAKBMode = false --Keyboard mode
     _NAOnline = false --If game is in online mode
+    _NAArgsUsed = false --Were NAtoms autojoin/autohost arguments used?
     _NAHostIP = nil --IP address and port of host
     _NAServerIP = nil --IP address and port of server
     _NAPort = "5047" --Port number
-    _NAPlayerNick = "Guest" --Player nickname
+    _NAPlayerNick = "Player" --Player nickname
     loadSettings()
     readArgs(args) --Read commandline parameters
     checkSetValues() --Make sure the settings are within the acceptable range
-    if(_NAHostIP ~= nil) then --If host mode is enabled
-        net = require("network.networkhandler")
-        _CAState.list["game"] = require("states.game.gamestate")
-        _CAState.list["netmenu"] = require("states.menu.networkmenustate")
-        _CAState.change("netmenu")
-    elseif(_NAServerIP ~= nil) then --If join mode is enabled
-        net = require("network.networkhandler")
-        _CAState.list["game"] = require("states.game.gamestate")
-        _CAState.list["netmenu"] = require("states.menu.networkmenustate")
+    net = require("network.networkhandler")
+    _CAState.list["game"] = require("states.game.gamestate")
+    _CAState.list["menu"] = require("states.menu.menustate")
+    _CAState.list["netmenu"] = require("states.menu.networkmenustate")
+    if _NAArgsUsed and (_NAHostIP ~= nil or _NAServerIP ~= nil) then --If host mode or client mode is enabled
         _CAState.change("netmenu")
     else
-        _CAState.list["game"] = require("states.game.gamestate")
-        _CAState.list["menu"] = require("states.menu.menustate")
         _CAState.change("menu")
     end
 end
@@ -188,6 +215,8 @@ love.keyreleased = _CAState.keyreleased
 love.mousepressed = _CAState.mousepressed
 
 love.mousereleased = _CAState.mousereleased
+
+love.textinput = _CAState.textinput
 
 love.focus = _CAState.focus
 

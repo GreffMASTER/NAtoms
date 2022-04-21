@@ -30,6 +30,8 @@ local mlevel = {love.graphics.newImage("graphics/m_ailevel1.png"),
 
 local mcpu = love.graphics.newImage("graphics/m_cpu.png")
 
+local monline = love.graphics.newImage("graphics/m_online.png")
+
 local catom = love.graphics.newImage("graphics/atom.png")
 
 local kalogo = love.graphics.newImage("graphics/m_kalogo.png")
@@ -55,6 +57,8 @@ local sndclick = love.audio.newSource("sounds/click.wav","static")
 local madebystr = "Made by Nightwolf-47" --Attribution string (bottom-right corner)
 
 local versionstr = "v"..love.window.getTitle():sub(12,-1) --version number string
+
+local menuonline = require("states.menu.menuonline")
 
 local function playfunc(x,y) --Play button function: start the game
     _CAState.change("game")
@@ -169,6 +173,10 @@ local function tutorialfunc(x,y,button)
     _CAState.change("game",{"tutorial"})
 end
 
+local function onlinefunc(x,y,button)
+    menuonline.isEnabled = true
+end
+
 local menuatoms = {} --Table of background atoms
 --Format: {x,y,playerColor,xspeed,yspeed,atomCount}
 --playerColor is a number from 1 to 4
@@ -190,6 +198,7 @@ local buttons = {
     {mp3button,ptstrfunc,425,325,"small",mp3button}, --Player 3 type
     {mp4button,ptstrfunc,516,325,"small",mp4button}, --Player 4 type
     {mtutorial,"Start the tutorial.",50,205,"click",tutorialfunc}, --Tutorial button
+    {monline,"Open the online multiplayer menu.",516,20,"small",onlinefunc} --Online menu button
 }
 
 local function spawnAtom(color,xpos,maxatoms) --Spawn menu background atoms unless atom count > maxatoms
@@ -258,7 +267,9 @@ function menustate.init() --Initialize/modify some values, check for saved game 
     end
     if _CAOSType == "Web" then --On Newgrounds, my nick is KleleMaster
         madebystr = "Made by KleleMaster"
+        table.remove(buttons) --No online mode in HTML5 version
     end
+    menuonline.init(sndclick)
     if winw ~= 640 or winh ~= 480 or _CAOSType == "Web" then return 640,480 end
 end
 
@@ -279,6 +290,7 @@ function menustate.update(dt)
     end
     menuatoms = newatoms
     spawnAtom(love.math.random(1,4),love.math.random(20,620),15)
+    if menuonline.isEnabled then menuonline.update(dt) end
 end
 
 function menustate.draw()
@@ -292,7 +304,7 @@ function menustate.draw()
         local buttonselected = false
         local descstr = v[2] --button description
         if type(v[2]) == "function" then descstr = v[2](k) end
-        if buttonpressed == 0 or buttonpressed == k then
+        if not menuonline.isEnabled and (buttonpressed == 0 or buttonpressed == k) then
             local mx, my = _CAState.getMousePos()
             if (v[5] == "small" and mx >= v[3] and mx < v[3]+84 and my >= v[4] and my < v[4]+75)
             or (v[5] ~= "small" and mx >= v[3] and mx < v[3]+150 and my >= v[4] and my < v[4]+75) then --hover
@@ -329,7 +341,7 @@ function menustate.draw()
         end
         love.graphics.setColor(1,1,1,1)
     end
-    if buttonpressed > 0 then
+    if buttonpressed > 0 and not menuonline.isEnabled then
         local descstr = buttons[buttonpressed][2] --button description
         if type(descstr) == "function" then descstr = buttons[buttonpressed][2](buttonpressed) end
         love.graphics.setColor(1,0.65,0,1)
@@ -344,16 +356,32 @@ function menustate.draw()
     love.graphics.rectangle("fill",-50,0,50,480)
     love.graphics.rectangle("fill",640,0,50,480)
     love.graphics.setColor(1,1,1,1)
+    if menuonline.isEnabled then menuonline.draw() end
 end
 
 function menustate.keypressed(key)
     if _CAOSType ~= "Web" and menutimer >= 0.3 and key == "escape" then
-        love.event.quit(0)
+        if menuonline.isEnabled then
+            menuonline.isEnabled = false
+            menuonline.saveData()
+        else
+            love.event.quit(0)
+        end
+    elseif menuonline.isEnabled then
+        menuonline.keypressed(key)
+    end
+end
+
+function menustate.keyreleased(key)
+    if menuonline.isEnabled then
+        menuonline.keyreleased(key)
     end
 end
 
 function menustate.mousepressed(x,y,button)
-    if menutimer >= 0.3 and (button == 1 or button == 2) then
+    if menuonline.isEnabled then
+        menuonline.mousepressed(x,y,button)
+    elseif menutimer >= 0.3 and (button == 1 or button == 2) then
         for k,v in ipairs(buttons) do
             if (v[5] == "small" and x >= v[3] and x < v[3]+84 and y >= v[4] and y < v[4]+75)
             or (v[5] ~= "small" and x >= v[3] and x < v[3]+150 and y >= v[4] and y < v[4]+75) then --pressed
@@ -379,7 +407,9 @@ function menustate.mousepressed(x,y,button)
 end
 
 function menustate.mousereleased(x,y,button)
-    if menutimer >= 0.3 then
+    if menuonline.isEnabled then
+        menuonline.mousereleased(x,y,button)
+    elseif menutimer >= 0.3 then
         if button == 1 then
             buttonpressed = 0
             buttontimer = 0.0
@@ -395,6 +425,19 @@ function menustate.mousereleased(x,y,button)
     end
 end
 
+function menustate.textinput(t)
+    if menuonline.isEnabled then
+        menuonline.textinput(t)
+    end
+end
+
 menustate.stop = _CAState.saveSettings --Save settings
+
+function menustate.quit()
+    if menuonline.isEnabled then
+        menuonline.saveData()
+    end
+    return false
+end
 
 return menustate
