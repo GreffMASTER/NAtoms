@@ -55,7 +55,7 @@ function networkmenustate.init()
         net.disqualified = false
     end
     if net.mode == "Server" then
-        love.window.setTitle(love.window.getTitle() .. " - Server")
+        love.window.setTitle("NAtoms - Server")
     end
     local winh = love.graphics.getHeight()
     local winw = love.graphics.getWidth()
@@ -109,7 +109,6 @@ function networkmenustate.draw()
     else
         love.graphics.print("Press enter to switch your ready state", 10, love.graphics.getHeight() - 20)
     end
-    love.graphics.print("FPS: " .. love.timer.getFPS(), 0, 0)
 end
 
 function networkmenustate.keypressed(key)

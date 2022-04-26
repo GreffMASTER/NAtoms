@@ -242,7 +242,6 @@ function gamestate.mousepressed(x, y, button)
                     local tplayer = gamelogic.grid[pressx][pressy].player
                     if tplayer == 0 or tplayer == gamelogic.curplayer then
                         net.clientpeer:send(gmpacket.encode("CLICKEDTILE",{pressx,pressy}))
-                        net.waiting = true
                     end
                 end
             end
