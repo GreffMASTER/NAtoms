@@ -44,4 +44,4 @@ On Linux it should be in `~/.local/share/love/kleleatoms`
 **DrPetter** - SFXR, a tool used to make sounds for this game.  
 
 ## License
-This game is licensed under the MIT License, see [LICENSE](https://github.com/Nightwolf-47/KleleAtoms/blob/main/LICENSE) for details.
+This game is licensed under the MIT License, see [LICENSE](https://github.com/GreffMASTER/NAtoms/blob/main/LICENSE) for details.
