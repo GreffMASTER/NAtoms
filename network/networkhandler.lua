@@ -1,5 +1,6 @@
 enet = require "enet"
 gmpacket = require "network.gmpacket"
+stuff = require "stuff"
 
 local nah = {}
 
@@ -9,28 +10,36 @@ local sndready = love.audio.newSource("sounds/natoms/ready.wav","static")
 local sndnotready = love.audio.newSource("sounds/natoms/notready.wav","static")
 local sndcountdown = love.audio.newSource("sounds/natoms/countdown.wav","static")
 
-nah.version = "0.2"
+local urav = nil
 
-nah.enethost = nil
-nah.enetclient = nil
-nah.hostevent = nil
-nah.clientpeer = nil
-nah.mode = nil
-nah.connected = false
-nah.players = {} -- {peer_index, ip, ready}
-nah.playersdone = {}
-nah.countdown = 6
-nah.ingame = false
-nah.allready = false
-nah.waiting = false
-nah.disqualified = false
+nah.version = "0.3"
 
-nah.yourindex = nil
-nah.prevplayerturn = nil
+function nah.resetVars()
 
--- hooks
-nah.gamelogic = nil
-nah.netmenu = nil
+    nah.enethost = nil
+    nah.enetclient = nil
+    nah.hostevent = nil
+    nah.clientpeer = nil
+    nah.mode = nil
+    nah.connected = false
+    nah.players = {} -- {peer_index, ip, ready}
+    nah.avatars = {false,false,false,false}
+    nah.playersdone = {}
+    nah.countdown = 6
+    nah.ingame = false
+    nah.allready = false
+    nah.waiting = false
+    nah.disqualified = false
+
+    nah.yourindex = nil
+    nah.prevplayerturn = nil
+    nah.youravatar = nil
+
+    -- hooks
+    nah.gamelogic = nil
+    nah.netmenu = nil
+
+end
 
 local authList = {}
 
@@ -47,29 +56,69 @@ local function addPlayerToPlayerList(p,nick)
 end
 
 function nah.init()
+    nah.resetVars()
     if _NAHostIP ~= nil then
-        print("Initiating on " .. _NAHostIP..":".._NAPort)
-        _CAState.printmsg("Hosting Server on IP: " .. _NAHostIP..":".._NAPort, 4)
-        if _NAHostIP == "localhost" then
-            nah.enethost = enet.host_create("*:".._NAPort, 5)
-        else
-            nah.enethost = enet.host_create(_NAHostIP..":".._NAPort, 5)
-        end
-        if nah.enethost == nil then -- the server could not create a host
-            love.window.showMessageBox("Server Error","Failed to start the server. Perhaps a server is already running on " .. _NAHostIP .. "?", "error")
-            love.event.quit()
-        end
-        nah.enetclient = enet.host_create()
-        nah.clientpeer = nah.enetclient:connect(_NAHostIP..":".._NAPort)
+        nah.startServer()
         nah.mode = "Server"
     elseif _NAServerIP ~= nil then
+
         print("Connecting to " .. _NAServerIP..":".._NAPort)
         _CAState.printmsg("Connecting to: " .. _NAServerIP..":".._NAPort, 40)
+
         nah.enetclient = enet.host_create()
         nah.clientpeer = nah.enetclient:connect(_NAServerIP..":".._NAPort)
         nah.mode = "Client"
     end
+
+    if love.filesystem.getInfo("avatar.png") then 
+        urav = love.image.newImageData("avatar.png")
+        if urav:getWidth() == 64 and urav:getWidth() == 64 then
+            nah.youravatar = love.graphics.newImage(urav)
+        else
+            print("Avatar must be 64x64! Resetting to default avatar...")
+            urav = nil
+            nah.youravatar = love.graphics.newImage("graphics/natoms/defaultav.png")
+        end
+    else
+        print("Avatar not found! Resetting to default avatar...")
+        nah.youravatar = love.graphics.newImage("graphics/natoms/defaultav.png")
+    end
+
     _NAOnline = true
+end
+
+function nah.startServer()
+    print("Initiating on " .. _NAHostIP..":".._NAPort)
+    _CAState.printmsg("Hosting Server on IP: " .. _NAHostIP..":".._NAPort, 4)
+
+    if _NAHostIP == "localhost" then
+        nah.enethost = enet.host_create("*:".._NAPort, 5)
+    else
+        nah.enethost = enet.host_create(_NAHostIP..":".._NAPort, 5)
+    end
+
+    if nah.enethost == nil then -- the server could not create a host
+        love.window.showMessageBox("Server Error","Failed to start the server. Perhaps a server is already running on " .. _NAHostIP .. "?", "error")
+        love.event.quit()
+    end
+
+    nah.enetclient = enet.host_create()
+    nah.clientpeer = nah.enetclient:connect(_NAHostIP..":".._NAPort)
+end
+
+function nah.stopServer()
+    -- disconnect all peers
+    for i=1,4 do
+        if nah.enethost:get_peer(i) then
+            nah.enethost:get_peer(i):disconnect_now(100)
+        end
+    end
+    love.audio.play(snddisconn)
+    nah.enethost:flush()
+    nah.enethost:destroy()
+    nah.enethost = nil
+    nah.enetclient = nil
+    _NAOnline = false
 end
 
 function nah.ServerThinker(dt)
@@ -136,6 +185,7 @@ function nah.ServerThinker(dt)
                 if v[1] == nah.hostevent.peer:index() then
                     pnick = v[2]
                     table.remove(nah.players, i)
+                    nah.avatars[i] = false
                     break
                 end
             end
@@ -205,6 +255,76 @@ function nah.ServerThinker(dt)
 
                 if byplayer then -- allow only from players on the player list
 
+                    -- AVATAR STUFF
+                    
+                    if packet["name"] == "AVHASH" then
+                        hash = packet["data"][1]
+                        if love.filesystem.getInfo("cache/"..hash..".png") then
+                            print("Found avatar in cache")
+                            avdata = love.image.newImageData("cache/"..hash..".png")
+                            avimage = love.graphics.newImage(avdata)
+
+                            for i, p in ipairs(nah.players) do
+                                if p[1] == nah.hostevent.peer:index() then
+                                    nah.avatars[i] = {avimage,avdata}
+                                    nah.enethost:broadcast(gmpacket.encode("AVHASH",{hash,nah.hostevent.peer:index()}))
+                                    break
+                                end
+                            end
+
+                        else
+                            print("Avatar not cached, requesting...")
+                            nah.hostevent.peer:send(gmpacket.encode("GETAV",{}))   
+                        end
+                    end
+
+                    if packet["name"] == "AVATAR" then
+                        if packet["data"][1] then
+                            avdata = stuff.B64ToData(packet["data"][1],packet["data"][2])
+                            if avdata:getWidth() == 64 and avdata:getWidth() == 64 then
+                                hash = love.data.encode("string", "hex", love.data.hash("sha256",avdata))
+                                avimage = love.graphics.newImage(avdata)
+
+                                love.filesystem.createDirectory("cache")
+                                avdata:encode("png","cache/"..hash..".png")
+                            else
+                                avimage = false
+                            end
+                        else
+                            avimage = false
+                        end
+
+                        for i, p in ipairs(nah.players) do
+                            if p[1] == nah.hostevent.peer:index() then
+                                if avimage then
+                                    nah.avatars[i] = {avimage,avdata}
+                                    nah.enethost:broadcast(gmpacket.encode("AVHASH",{hash,nah.hostevent.peer:index()}))
+                                else
+                                    nah.avatars[i] = avimage
+                                end
+                                break
+                            end
+                        end
+
+                    end
+
+                    if packet["name"] == "GETAV" then
+                        avindex = packet["data"][1]
+                        avdata = nah.avatars[avindex][2]
+                        nah.hostevent.peer:send(gmpacket.encode("AVATAR", {stuff.imgDataToB64(avdata),avdata:getFormat(),avindex}))
+                    end
+
+                    if packet["name"] == "GETAVS" then
+                        for i,av in pairs(nah.avatars) do
+                            if av then
+                                hash = love.data.encode("string", "hex", love.data.hash("sha256",av[2]))
+                                nah.hostevent.peer:send(gmpacket.encode("AVHASH",{hash,i}))
+                            end
+                        end
+                    end
+
+                    -- OTHER STUFF
+
                     if packet["name"] == "IMREADY" then
                         local plyrnick
                         for i, p in ipairs(nah.players) do
@@ -233,6 +353,8 @@ function nah.ServerThinker(dt)
                         nah.enethost:broadcast(gmpacket.encode("PLYRS", nah.playerListToArray(nah.players)))
                     end
 
+                    -- GAMELOGIC STUFF
+
                     if packet["name"] == "DONE" then
                         nah.playersdone[nah.hostevent.peer:index()] = true
                         if nah.allPlayersDone() then
@@ -256,7 +378,6 @@ function nah.ServerThinker(dt)
                     end
 
                 end -- end of playertab check
-
             end
         end
         nah.hostevent = nah.enethost:service()
@@ -308,8 +429,60 @@ function nah.ClientThinker(dt)
                     nah.connected = true
                     nah.yourindex = packet["data"][1]
                     nah.netmenu.setBgColor(nah.yourindex)
+
+                    if urav then
+                        nah.clientpeer:send(gmpacket.encode("AVHASH", {love.data.encode("string", "hex", love.data.hash("sha256",urav))}))
+                    else
+                        nah.clientpeer:send(gmpacket.encode("AVATAR", {false}))
+                    end
+                    nah.clientpeer:send(gmpacket.encode("GETAVS", {}))
                     _CAState.printmsg("Successfully connected to the game.", 4)
                 end
+
+                -- AVATAR STUFF
+                    
+                if packet["name"] == "GETAV" then
+                    nah.clientpeer:send(gmpacket.encode("AVATAR", {stuff.imgDataToB64(urav),urav:getFormat()}))
+                end
+
+                if packet["name"] == "AVHASH" then
+                    hash = packet["data"][1]
+                    peerindex = packet["data"][2]
+                    if peerindex ~= nah.yourindex then
+                        if love.filesystem.getInfo("cache/"..hash..".png") then
+                            avdata = love.image.newImageData("cache/"..hash..".png")
+                            avimage = love.graphics.newImage(avdata)
+                            nah.avatars[peerindex] = {avimage,avdata}
+                        else
+                            nah.clientpeer:send(gmpacket.encode("GETAV", {peerindex}))
+                        end
+                    end
+                end
+
+                if packet["name"] == "AVATAR" then
+                    avindex = packet["data"][3]
+                    if packet["data"][1] then
+                        avdata = stuff.B64ToData(packet["data"][1],packet["data"][2])
+                        if avdata:getWidth() == 64 and avdata:getWidth() == 64 then
+                            hash = love.data.encode("string", "hex", love.data.hash("sha256",avdata))
+                            avimage = love.graphics.newImage(avdata)
+
+                            love.filesystem.createDirectory("cache")
+                            avdata:encode("png","cache/"..hash..".png")
+                        else
+                            avimage = false
+                        end
+                    else
+                        avimage = false
+                    end
+                    if avimage then
+                        nah.avatars[avindex] = {avimage,avdata}
+                    else
+                       nah.avatars[avindex] = avimage
+                    end
+                end
+
+                -- OTHER STUFF
 
                 if packet["name"] == "PLYRS" then
                     if nah.mode ~= "Server" then
@@ -379,6 +552,8 @@ function nah.ClientThinker(dt)
                     end
                 end
 
+                -- GAMELOGIC STUFF
+
                 if packet["name"] == "CLICKON" then
                     nah.prevplayerturn = nah.gamelogic.curplayer
                     nah.waiting = true
@@ -442,34 +617,6 @@ function nah.playerListToArray(plyrs)
         end
     end
     return arr
-end
-
-function nah.stopServer()
-    -- disconnect all peers
-    for i=1,4 do
-        if nah.enethost:get_peer(i) then
-            nah.enethost:get_peer(i):disconnect_now(100)
-        end
-    end
-    
-    nah.enethost:flush()
-    nah.enethost:destroy()
-    nah.enethost = nil
-end
-
-function dump(o)
-    if type(o) == 'table' then
-        local s = '{ '
-        for k, v in pairs(o) do
-            if type(k) ~= 'number' then
-                k = '"' .. k .. '"'
-            end
-            s = s .. '[' .. k .. '] = ' .. dump(v) .. ','
-        end
-        return s .. '} '
-    else
-        return tostring(o)
-    end
 end
 
 return nah

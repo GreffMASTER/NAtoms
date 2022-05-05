@@ -1,11 +1,16 @@
 local networkmenustate = {}
 
+local debug = false
+local debughold = false
+
 local naicon = love.image.newImageData("graphics/natoms/naicon.png")
 local mbg = love.graphics.newImage("graphics/natoms/m_bgcustom.png")
 local mnalogo = love.graphics.newImage("graphics/natoms/m_nalogo.png")
 local bgcolor = {1, 1, 1, 1}
-
+local mplayer = love.graphics.newImage("graphics/m_player.png")
+local defaultav = love.graphics.newImage("graphics/natoms/defaultav.png")
 local mbgnatoms = love.graphics.newImage("graphics/natoms/bgnatoms.png")
+local mready = love.graphics.newImage("graphics/natoms/ready.png")
 local curimg = mbgnatoms
 curimg:setWrap("repeat", "repeat", "repeat")
 
@@ -26,6 +31,14 @@ netmenu.playercolor = {
     [3] = {0, 1, 0, 1}, -- green
     [4] = {1, 1, 0, 1}, -- yellow
 }
+
+local function drawRectOutline(x,y,w,h,colbg,colout)
+    love.graphics.setColor(colout)
+    love.graphics.rectangle("fill",x-2,y-2,w+4,h+4)
+    love.graphics.setColor(colbg)
+    love.graphics.rectangle("fill",x,y,w,h)
+    love.graphics.setColor({1,1,1,1})
+end
 
 function netmenu.setImage(imgindex)
     curimg = netmenu.images[imgindex]
@@ -54,6 +67,7 @@ function networkmenustate.init()
         net.waiting = false
         net.disqualified = false
     end
+    
     if net.mode == "Server" then
         love.window.setTitle("NAtoms - Server")
     end
@@ -77,7 +91,9 @@ function networkmenustate.update(dt)
 
     -- server/client logic
     if net.mode == "Server" then
-        net.ServerThinker(dt)
+        if net.enethost then
+            net.ServerThinker(dt)
+        end
     end
     net.ClientThinker(dt)
 end
@@ -87,20 +103,53 @@ function networkmenustate.draw()
     love.graphics.draw(mbg)
     love.graphics.setColor(1, 1, 1, 1)
     love.graphics.draw(curimg, mbglayer) -- draw scrolling layer
-    love.graphics.draw(mnalogo, 320, -20, 0, 0.75, 0.75)
+    love.graphics.draw(mnalogo, 300, 0, 0, 0.75, 0.75)
 
-    for i, p in ipairs(net.players) do
-        if p ~= nil then
-            local youtext = ""
-            local readytext = "not ready."
-            if p[1] == net.yourindex then
-                youtext = " <- You"
+    if net.connected then
+
+    for i=0,3 do
+        if net.players[i+1] then
+            plyrid = net.players[i+1][1]
+            drawRectOutline(0,(i*64)+32,256,64,{0.2,0.2,0.2,1},{0.5,0.5,0.5,1})
+            love.graphics.setColor(netmenu.playercolor[plyrid])
+            love.graphics.draw(mplayer,0,(i*64)+32)
+            love.graphics.setColor({1,1,1,1})
+            player = nil
+            for j,p in pairs(net.players) do
+                if p[1]==i+1 then
+                    player = p
+                    break
+                end
             end
-            if p[3] then
-                readytext = "ready."
+            if player then
+                love.graphics.printf(tostring(player[2]), _CAFont16, 52, (i * 64)+56,128,"center")
+                if player[3] then   -- if player ready
+                    love.graphics.draw(mready,0,(i*64)+32)
+                end
             end
-            love.graphics.print("Player " .. tostring(p[1]) .. ": " .. p[2] .. " is " .. readytext .. youtext, 10, i * 20)
+            if plyrid == net.yourindex then
+                love.graphics.draw(net.youravatar,128+64,(i*64)+32)
+            else
+                if net.avatars[plyrid] then
+                    love.graphics.draw(net.avatars[plyrid][1],128+64,(i*64)+32)
+                else
+                    love.graphics.draw(defaultav,128+64,(i*64)+32)
+                end
+            end
+            
+        else
+            drawRectOutline(0,(i*64)+32,64,64,{0.2,0.2,0.2,1},{0.5,0.5,0.5,1})
+            love.graphics.draw(mplayer,0,(i*64)+32)
         end
+        
+    end
+
+    if debug then
+        drawRectOutline(280,128,256+80,256,{0,0,0,1},{0.5,0.5,0.5,1}) -- chat box
+        drawRectOutline(280,128+256,256,32,{0,0,0,1},{0.5,0.5,0.5,1}) -- chat input (mockup, replace with textbox)
+        drawRectOutline(280+256,128+256,80,32,{0.25,0.25,0.25,1},{0.5,0.5,0.5,1}) -- send button (mockup, replace with textbox)
+        love.graphics.setColor({1,1,1,1})
+        love.graphics.printf("Send",280+256,128+256+8,80,"center")
     end
 
     if _CAIsMobile then
@@ -108,6 +157,7 @@ function networkmenustate.draw()
         love.graphics.print("Touch the screen to switch your ready state", 10, wy - 20)
     else
         love.graphics.print("Press enter to switch your ready state", 10, love.graphics.getHeight() - 20)
+    end
     end
 end
 
@@ -120,6 +170,29 @@ function networkmenustate.keypressed(key)
             net.clientpeer:send(gmpacket.encode("IMNOTREADY", {}))
         end
     end
+
+    if key == "lctrl" then debughold = true end
+
+    if key == "d" then
+        if debughold then debug = not debug end
+    end
+
+    if key == "escape" then
+        _CAState.printmsg("Disconnecting...", 3)
+        if net.mode == "Server" then
+            net.stopServer()
+        end
+        if net.mode == "Client" then
+            net.clientpeer:disconnect_now()
+            _NAOnline = false
+        end
+        love.window.setTitle("KleleAtoms 1.3 (NAtoms)")
+        _CAState.change("menu")
+    end
+end
+
+function networkmenustate.keyreleased(key)
+    if key == "lctrl" then debughold = false end
 end
 
 function networkmenustate.mousepressed(x, y, button)
