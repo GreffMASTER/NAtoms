@@ -12,7 +12,7 @@ local sndcountdown = love.audio.newSource("sounds/natoms/countdown.wav","static"
 
 local urav = nil
 
-nah.version = "0.3"
+nah.version = "a1.1"
 
 function nah.resetVars()
 

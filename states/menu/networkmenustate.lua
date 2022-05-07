@@ -59,6 +59,7 @@ function networkmenustate.init()
     love.window.setIcon(naicon)
     curimg = mbgnatoms
     ready = false
+    bgcolor = {1, 1, 1, 1}
     if not _NAOnline then -- check if the handler is not elready running
         net.init()
         net.netmenu = netmenu
