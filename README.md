@@ -21,7 +21,7 @@ This fork implements online multiplayer to KleleAtoms thru UDP using ENet.
 In order to host a server, you need to have a public ip and an open UDP port on your router (default 5047).  
 
 To add your own avatar, you must add a 64x64 png image called `avatar.png` to the app data directory.  
-On Windows it should be in `%USERPROFILE%\AppData\Local\LOVE\kleleatoms`  
+On Windows it should be in `%APPDATA%\LOVE\kleleatoms`  
 On Linux it should be in `~/.local/share/love/kleleatoms`  
 
 ## Command line parameters
