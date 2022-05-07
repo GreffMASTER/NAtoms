@@ -2,19 +2,23 @@ local networkmenustate = {}
 
 local debug = false
 local debughold = false
-
+-- graphics
 local naicon = love.image.newImageData("graphics/natoms/naicon.png")
 local mbg = love.graphics.newImage("graphics/natoms/m_bgcustom.png")
 local mnalogo = love.graphics.newImage("graphics/natoms/m_nalogo.png")
-local bgcolor = {1, 1, 1, 1}
 local mplayer = love.graphics.newImage("graphics/m_player.png")
 local defaultav = love.graphics.newImage("graphics/natoms/defaultav.png")
 local mbgnatoms = love.graphics.newImage("graphics/natoms/bgnatoms.png")
 local mready = love.graphics.newImage("graphics/natoms/ready.png")
 local curimg = mbgnatoms
 curimg:setWrap("repeat", "repeat", "repeat")
+-- variables
+local bgcolor = {1, 1, 1, 1}
+local mbglayer = love.graphics.newQuad(0, 0, 640, 480, 128, 128)
+local bg_spd = 32
+local ready = false
 
-local netmenu = {}
+local netmenu = {}  -- for use outside of lobby state
 
 netmenu.images = {
     [0] = love.graphics.newImage("graphics/natoms/bgnatoms.png"),
@@ -32,6 +36,16 @@ netmenu.playercolor = {
     [4] = {1, 1, 0, 1}, -- yellow
 }
 
+function netmenu.setImage(imgindex)
+    curimg = netmenu.images[imgindex]
+    curimg:setWrap("repeat", "repeat", "repeat")
+end
+
+
+function netmenu.setBgColor(val)
+    bgcolor = netmenu.playercolor[val]
+end
+
 local function drawRectOutline(x,y,w,h,colbg,colout)
     love.graphics.setColor(colout)
     love.graphics.rectangle("fill",x-2,y-2,w+4,h+4)
@@ -40,29 +54,15 @@ local function drawRectOutline(x,y,w,h,colbg,colout)
     love.graphics.setColor({1,1,1,1})
 end
 
-function netmenu.setImage(imgindex)
-    curimg = netmenu.images[imgindex]
-    curimg:setWrap("repeat", "repeat", "repeat")
-end
-
-function netmenu.setBgColor(val)
-    bgcolor = netmenu.playercolor[val]
-end
-
-local mbglayer = love.graphics.newQuad(0, 0, 640, 480, 128, 128)
-local bg_spd = 32
-
-local ready = false
-
 function networkmenustate.init()
     love.window.setTitle("NAtoms")
     love.window.setIcon(naicon)
     curimg = mbgnatoms
+    ready = false
     if not _NAOnline then -- check if the handler is not elready running
         net.init()
         net.netmenu = netmenu
     else
-        ready = false
         net.ingame = false
         net.waiting = false
         net.disqualified = false
@@ -99,6 +99,7 @@ function networkmenustate.update(dt)
 end
 
 function networkmenustate.draw()
+
     love.graphics.setColor(bgcolor)
     love.graphics.draw(mbg)
     love.graphics.setColor(1, 1, 1, 1)
@@ -106,58 +107,54 @@ function networkmenustate.draw()
     love.graphics.draw(mnalogo, 300, 0, 0, 0.75, 0.75)
 
     if net.connected then
+        for i=0,3 do
+            if net.players[i+1] then    -- draw open bar with player data (colored player icon, ready status, nick and avatar)
+                player = net.players[i+1]
+                plyrid = player[1]
 
-    for i=0,3 do
-        if net.players[i+1] then
-            plyrid = net.players[i+1][1]
-            drawRectOutline(0,(i*64)+32,256,64,{0.2,0.2,0.2,1},{0.5,0.5,0.5,1})
-            love.graphics.setColor(netmenu.playercolor[plyrid])
-            love.graphics.draw(mplayer,0,(i*64)+32)
-            love.graphics.setColor({1,1,1,1})
-            player = nil
-            for j,p in pairs(net.players) do
-                if p[1]==i+1 then
-                    player = p
-                    break
+                drawRectOutline(0,(i*64)+32,256,64,{0.2,0.2,0.2,1},{0.5,0.5,0.5,1})
+                love.graphics.setColor(netmenu.playercolor[plyrid])
+                love.graphics.draw(mplayer,0,(i*64)+32)
+                love.graphics.setColor({1,1,1,1})
+
+                if player then
+                    love.graphics.printf(tostring(player[2]), _CAFont16, 52, (i * 64)+56,128,"center")
+                    if player[3] then   -- if player ready
+                        love.graphics.draw(mready,0,(i*64)+32)
+                    end
                 end
-            end
-            if player then
-                love.graphics.printf(tostring(player[2]), _CAFont16, 52, (i * 64)+56,128,"center")
-                if player[3] then   -- if player ready
-                    love.graphics.draw(mready,0,(i*64)+32)
-                end
-            end
-            if plyrid == net.yourindex then
-                love.graphics.draw(net.youravatar,128+64,(i*64)+32)
-            else
-                if net.avatars[plyrid] then
-                    love.graphics.draw(net.avatars[plyrid][1],128+64,(i*64)+32)
+
+                if plyrid == net.yourindex then     -- draw your local avatar
+                    love.graphics.draw(net.youravatar,128+64,(i*64)+32)
                 else
-                    love.graphics.draw(defaultav,128+64,(i*64)+32)
+                    if net.avatars[plyrid] then     -- draw player avatar
+                        love.graphics.draw(net.avatars[plyrid][1],128+64,(i*64)+32)
+                    else                            -- draw default avatar
+                        love.graphics.draw(defaultav,128+64,(i*64)+32)
+                    end
                 end
+                
+            else    -- draw closed bar with gray player icon
+                drawRectOutline(0,(i*64)+32,64,64,{0.2,0.2,0.2,1},{0.5,0.5,0.5,1})
+                love.graphics.draw(mplayer,0,(i*64)+32)
             end
             
-        else
-            drawRectOutline(0,(i*64)+32,64,64,{0.2,0.2,0.2,1},{0.5,0.5,0.5,1})
-            love.graphics.draw(mplayer,0,(i*64)+32)
         end
-        
-    end
 
-    if debug then
-        drawRectOutline(280,128,256+80,256,{0,0,0,1},{0.5,0.5,0.5,1}) -- chat box
-        drawRectOutline(280,128+256,256,32,{0,0,0,1},{0.5,0.5,0.5,1}) -- chat input (mockup, replace with textbox)
-        drawRectOutline(280+256,128+256,80,32,{0.25,0.25,0.25,1},{0.5,0.5,0.5,1}) -- send button (mockup, replace with textbox)
-        love.graphics.setColor({1,1,1,1})
-        love.graphics.printf("Send",280+256,128+256+8,80,"center")
-    end
+        if debug then
+            drawRectOutline(280,128,256+80,256,{0,0,0,1},{0.5,0.5,0.5,1}) -- chat box
+            drawRectOutline(280,128+256,256,32,{0,0,0,1},{0.5,0.5,0.5,1}) -- chat input (mockup, replace with textbox)
+            drawRectOutline(280+256,128+256,80,32,{0.25,0.25,0.25,1},{0.5,0.5,0.5,1}) -- send button (mockup, replace with textbox)
+            love.graphics.setColor({1,1,1,1})
+            love.graphics.printf("Send",280+256,128+256+8,80,"center")
+        end
 
-    if _CAIsMobile then
-        local wx,wy = _CAState.getWindowSize()
-        love.graphics.print("Touch the screen to switch your ready state", 10, wy - 20)
-    else
-        love.graphics.print("Press enter to switch your ready state", 10, love.graphics.getHeight() - 20)
-    end
+        if _CAIsMobile then
+            local wx,wy = _CAState.getWindowSize()
+            love.graphics.print("Touch the screen to switch your ready state", 10, wy - 20)
+        else
+            love.graphics.print("Press enter to switch your ready state", 10, love.graphics.getHeight() - 20)
+        end
     end
 end
 

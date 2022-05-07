@@ -222,7 +222,7 @@ function nah.ServerThinker(dt)
                 end
 
                 if packet["name"] == "AUTH" then
-                    local str = "NAtoms-v"..nah.version.."-ka13"
+                    local str = "NAtoms-v"..nah.version.."-"..gmpacket.version.."-ka13"
                     local hash = love.data.encode("string", "hex", love.data.hash("sha256", str))
                     if packet["data"][1] ~= hash then
                         nah.hostevent.peer:disconnect_now(99) 
@@ -392,7 +392,7 @@ function nah.ClientThinker(dt)
         print("Client detected message type: " .. nah.clientevent.type)
 
         if nah.clientevent.type == "connect" then
-            local str = "NAtoms-v"..nah.version.."-ka13"
+            local str = "NAtoms-v"..nah.version.."-"..gmpacket.version.."-ka13"
             local hash = love.data.encode("string", "hex", love.data.hash("sha256", str))
             nah.clientpeer:send(gmpacket.encode("AUTH", {hash,_NAPlayerNick}))
         end
@@ -424,6 +424,7 @@ function nah.ClientThinker(dt)
             print("Client received message: ", nah.clientevent.data, nah.clientevent.peer)
 
             local packet = gmpacket.decode(nah.clientevent.data)
+            if packet == nil then print("GOT NIL!!!!!!!!") end
             if packet then
                 if packet["name"] == "COOLANDGOOD" then
                     nah.connected = true
