@@ -153,10 +153,23 @@ function menuonline.draw()
 end
 
 function menuonline.keypressed(key)
-    if selTB and key == "backspace" then
-        textboxes[selTB]:eraselast()
-        isBackSpace = true
-        bpTimer = -0.15
+    if selTB then
+        if love.keyboard.isDown("lctrl","rctrl") then
+            if key == "c" then
+                love.system.setClipboardText(textboxes[selTB].input)
+            elseif key == "x" then
+                love.system.setClipboardText(textboxes[selTB].input)
+                textboxes[selTB]:clear()
+            elseif key == "v" then
+                textboxes[selTB]:setString(string.gsub(love.system.getClipboardText(),"%c",""))
+            end
+        end
+
+        if key == "backspace" then
+            textboxes[selTB]:eraselast()
+            isBackSpace = true
+            bpTimer = -0.15
+        end
     end
 end
 

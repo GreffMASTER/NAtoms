@@ -1,6 +1,8 @@
-utf8 = require("utf8")
-
 local textbox = {}
+
+local function textboxSub(self,i,j)
+    utf8.sub(self.input,i,j)
+end
 
 local function textboxLength(self)
     return utf8.len(self.input)
@@ -24,6 +26,16 @@ local function textboxWrite(self,str)
     assert(str,"textboxWrite: str is nil or false")
     if textboxLength(self) < self.charlimit or self.charlimit == 0 then
         self.input = self.input..str
+    end
+end
+
+local function textboxSetString(self,str)
+    --Unlike textboxWrite, it's meant to be used everywhere but love.textinput()
+    assert(str,"textboxWrite: str is nil or false")
+    if self.charlimit == 0 then
+        self.input = str
+    else
+        self.input = utf8.sub(str,1,self.charlimit)
     end
 end
 
@@ -71,6 +83,8 @@ function textbox.newObject(fontsize,charlimit,prestr)
     newtbox.clear = textboxClear
     newtbox.eraselast = textboxEraseLast
     newtbox.length = textboxLength
+    newtbox.sub = textboxSub
+    newtbox.setString = textboxSetString
     return newtbox
 end
 

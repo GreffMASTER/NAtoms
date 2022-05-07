@@ -1,3 +1,11 @@
+utf8 = require("utf8")
+
+--Extension to utf8 table, string.sub for utf-8 strings
+function utf8.sub(s,i,j)
+    j = j or #s-1
+    return string.sub(s,(utf8.offset(s,i) or #s+1),(utf8.offset(s,j+1) or #s+1)-1)
+end
+
 _CAState = require("state")
 
 local settsvals = { --A table to convert settings2.txt line number to a setting name
@@ -45,7 +53,7 @@ local function checkValidNetOptions() --Checks if net (NAtoms) settings are vali
     local tnum = math.floor(tonumber(_NAPort) or 5047)
     tnum = math.min(math.max(tnum, 1025), 49150)
     _NAPort = tostring(tnum)
-    _NAPlayerNick = _NAPlayerNick:gsub("%c","")
+    _NAPlayerNick = utf8.sub(_NAPlayerNick:gsub("%c",""),1,16)
 end
 
 local function checkSetValues() --Checks if values are in a valid range
