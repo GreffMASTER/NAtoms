@@ -94,6 +94,12 @@ function state.focus(focus) --Window focus callback function
     end
 end
 
+function state.filedropped(file) --Drag and drop callback function
+    if curstatedata and curstatedata.filedropped then
+        curstatedata.filedropped(file)
+    end
+end
+
 function state.quit() --love.quit callback function, saves settings
     state.saveSettings()
     if curstatedata and curstatedata.quit then

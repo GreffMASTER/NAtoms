@@ -431,6 +431,12 @@ function menustate.textinput(t)
     end
 end
 
+function menustate.filedropped(file)
+    if menuonline.isEnabled then
+        menuonline.filedropped(file)
+    end
+end
+
 menustate.stop = _CAState.saveSettings --Save settings
 
 function menustate.quit()

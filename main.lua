@@ -228,4 +228,6 @@ love.textinput = _CAState.textinput
 
 love.focus = _CAState.focus
 
+love.filedropped = _CAState.filedropped
+
 love.quit = _CAState.quit

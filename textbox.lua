@@ -8,6 +8,10 @@ local function textboxLength(self)
     return utf8.len(self.input)
 end
 
+local function textboxWidth(self)
+    return self.font:getWidth(self.prestr..self.input)
+end
+
 local function textboxDraw(self,x,y,showcursor)
     if type(x) ~= "number" then error("textboxDraw: x is not a number",2) end
     if type(y) ~= "number" then error("textboxDraw: y is not a number",2) end
@@ -83,6 +87,7 @@ function textbox.newObject(fontsize,charlimit,prestr)
     newtbox.clear = textboxClear
     newtbox.eraselast = textboxEraseLast
     newtbox.length = textboxLength
+    newtbox.curWidth = textboxWidth
     newtbox.sub = textboxSub
     newtbox.setString = textboxSetString
     return newtbox
