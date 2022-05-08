@@ -13,14 +13,15 @@ This fork implements online multiplayer to KleleAtoms thru UDP using ENet.
 
 ## Planned Features
 - Chat system
+- Dedicated server mode
 - Admin tools
 - Vote system
-- Dedicated server mode
 
 ## Aditional notes
 In order to host a server, you need to have a public ip and an open UDP port on your router (default 5047).  
 
-To add your own avatar, you must add a 64x64 png image called `avatar.png` to the app data directory.  
+To set your own avatar, you must open the network menu, click on the avatar button next to the user name field and drag a supported image file onto the game window.  
+You can also replace it manually by adding a 64x64 png image called `avatar.png` to the app data directory.  
 On Windows it should be in `%APPDATA%\LOVE\kleleatoms`  
 On Linux it should be in `~/.local/share/love/kleleatoms`  
 
@@ -41,7 +42,7 @@ On Linux it should be in `~/.local/share/love/kleleatoms`
 
 ## Credits  
 **LOVE Development Team** - Löve, a Lua game engine this game runs on.  
-**DrPetter** - SFXR, a tool used to make sounds for this game.  
+**DrPetter** - SFXR, a tool used to make music samples and sounds for this game.  
 
 ## License
 This game is licensed under the MIT License, see [LICENSE](https://github.com/GreffMASTER/NAtoms/blob/main/LICENSE) for details.

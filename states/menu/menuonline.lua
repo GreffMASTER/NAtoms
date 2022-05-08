@@ -36,7 +36,7 @@ local function hostfunc()
     _NAServerIP = textboxes[1].input
     _NAPort = textboxes[2].input
     _NAPlayerNick = textboxes[3].input
-    _CAState.change("netmenu")
+    _CAState.change("lobby")
 end
 
 local function joinfunc()
@@ -47,7 +47,7 @@ local function joinfunc()
         _NAServerIP = textboxes[1].input
         _NAPort = textboxes[2].input
         _NAPlayerNick = textboxes[3].input
-        _CAState.change("netmenu")
+        _CAState.change("lobby")
     else
         _CAState.printmsg("Server IP must not be empty to join!",4)
     end

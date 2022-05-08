@@ -6,13 +6,11 @@ local nah = {}
 
 local sndconn = love.audio.newSource("sounds/natoms/connect.wav","static")
 local snddisconn = love.audio.newSource("sounds/natoms/disconnect.wav","static")
-local sndready = love.audio.newSource("sounds/natoms/ready.wav","static")
-local sndnotready = love.audio.newSource("sounds/natoms/notready.wav","static")
 local sndcountdown = love.audio.newSource("sounds/natoms/countdown.wav","static")
 
 local urav = nil
 
-nah.version = "a1.1"
+nah.version = "a1.1.2"
 
 function nah.resetVars()
 
@@ -430,7 +428,7 @@ function nah.ClientThinker(dt)
                     nah.connected = true
                     nah.yourindex = packet["data"][1]
                     nah.netmenu.setBgColor(nah.yourindex)
-
+                    nah.netmenu.playMusic()
                     if urav then
                         nah.clientpeer:send(gmpacket.encode("AVHASH", {love.data.encode("string", "hex", love.data.hash("sha256",urav))}))
                     else
@@ -523,10 +521,8 @@ function nah.ClientThinker(dt)
                     if not nah.ingame then
                         if packet["data"][2] then
                             _CAState.printmsg(packet["data"][1] .. " is ready.", 4)
-                            love.audio.play(sndready)
                         elseif not packet["data"][2] then
                             _CAState.printmsg(packet["data"][1] .. " is not ready.", 4)
-                            love.audio.play(sndnotready)
                         end
                         nah.netmenu.setImage(0)
                     end
@@ -547,6 +543,7 @@ function nah.ClientThinker(dt)
 
                     nah.setupPlayers(packet["data"][3])
                     resetPlayersReady(nah.players)
+                    nah.netmenu.stopMusic()
                     _CAState.change("game")
                     if nah.gamelogic.curplayer ~= nah.yourindex then
                         nah.waiting = true

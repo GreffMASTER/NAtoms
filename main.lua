@@ -204,9 +204,9 @@ function love.load(args)
     net = require("network.networkhandler")
     _CAState.list["game"] = require("states.game.gamestate")
     _CAState.list["menu"] = require("states.menu.menustate")
-    _CAState.list["netmenu"] = require("states.menu.networkmenustate")
+    _CAState.list["lobby"] = require("states.menu.lobbystate")
     if _NAArgsUsed and (_NAHostIP ~= nil or _NAServerIP ~= nil) then --If host mode or client mode is enabled
-        _CAState.change("netmenu")
+        _CAState.change("lobby")
     else
         _CAState.change("menu")
     end

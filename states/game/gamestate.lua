@@ -262,7 +262,7 @@ function gamestate.mousereleased(x,y,button)
             if not _NAOnline then
                 _CAState.change("menu")
             else
-                _CAState.change("netmenu")
+                _CAState.change("lobby")
             end
         end
     end

@@ -1,9 +1,10 @@
-local networkmenustate = {}
+local lobbystate = {}
 
 local debug = false
 local debughold = false
 -- graphics
 local naicon = love.image.newImageData("graphics/natoms/naicon.png")
+local kaicon = love.image.newImageData("graphics/icon.png")
 local mbg = love.graphics.newImage("graphics/natoms/m_bgcustom.png")
 local mnalogo = love.graphics.newImage("graphics/natoms/m_nalogo.png")
 local mplayer = love.graphics.newImage("graphics/m_player.png")
@@ -12,11 +13,17 @@ local mbgnatoms = love.graphics.newImage("graphics/natoms/bgnatoms.png")
 local mready = love.graphics.newImage("graphics/natoms/ready.png")
 local curimg = mbgnatoms
 curimg:setWrap("repeat", "repeat", "repeat")
+-- sounds and music
+local sndready = love.audio.newSource("sounds/natoms/ready.wav","static")
+local sndnotready = love.audio.newSource("sounds/natoms/notready.wav","static")
+local music = love.audio.newSource("music/NetworkAtoms.it", "stream")
 -- variables
 local bgcolor = {1, 1, 1, 1}
 local mbglayer = love.graphics.newQuad(0, 0, 640, 480, 128, 128)
 local bg_spd = 32
 local ready = false
+local muspos = 0
+local musmuted = false
 
 local netmenu = {}  -- for use outside of lobby state
 
@@ -41,6 +48,13 @@ function netmenu.setImage(imgindex)
     curimg:setWrap("repeat", "repeat", "repeat")
 end
 
+function netmenu.playMusic()
+    music:play()
+end
+
+function netmenu.stopMusic()
+    music:stop()
+end
 
 function netmenu.setBgColor(val)
     bgcolor = netmenu.playercolor[val]
@@ -54,19 +68,20 @@ local function drawRectOutline(x,y,w,h,colbg,colout)
     love.graphics.setColor({1,1,1,1})
 end
 
-function networkmenustate.init()
+function lobbystate.init()
     love.window.setTitle("NAtoms")
     love.window.setIcon(naicon)
     curimg = mbgnatoms
     ready = false
-    bgcolor = {1, 1, 1, 1}
     if not _NAOnline then -- check if the handler is not elready running
+        bgcolor = {1, 1, 1, 1}
         net.init()
         net.netmenu = netmenu
     else
         net.ingame = false
         net.waiting = false
         net.disqualified = false
+        netmenu.playMusic()
     end
     
     if net.mode == "Server" then
@@ -79,7 +94,7 @@ function networkmenustate.init()
     end
 end
 
-function networkmenustate.update(dt)
+function lobbystate.update(dt)
     -- scrolling layer stuff
     local offx, offy = mbglayer:getViewport()
     if offx <= -128 then
@@ -90,6 +105,23 @@ function networkmenustate.update(dt)
     end
     mbglayer:setViewport(offx - dt * bg_spd, offy - dt * bg_spd, 640, 480)
 
+    -- music stuff
+    muspos = music:tell("seconds")
+    
+    if #net.players == 1 then
+        if muspos > 9.56 then music:seek(0) end
+    elseif #net.players == 2 then
+        if muspos > 19.12 then music:seek(9.56) end
+    elseif #net.players == 3 then
+        if muspos > 28.68 then music:seek(19.12) end
+    else
+        if muspos > 38.14 then music:seek(28.56) end
+        --[[if not music:isPlaying() then
+            music:play()
+            music:seek(28.56)
+        end]]
+    end
+
     -- server/client logic
     if net.mode == "Server" then
         if net.enethost then
@@ -99,7 +131,7 @@ function networkmenustate.update(dt)
     net.ClientThinker(dt)
 end
 
-function networkmenustate.draw()
+function lobbystate.draw()
 
     love.graphics.setColor(bgcolor)
     love.graphics.draw(mbg)
@@ -143,8 +175,8 @@ function networkmenustate.draw()
         end
 
         if debug then
-            drawRectOutline(280,128,256+80,256,{0,0,0,1},{0.5,0.5,0.5,1}) -- chat box
-            drawRectOutline(280,128+256,256,32,{0,0,0,1},{0.5,0.5,0.5,1}) -- chat input (mockup, replace with textbox)
+            drawRectOutline(280,128,256+80,256,{0,0,0,0.5},{0.5,0.5,0.5,0.5}) -- chat box
+            drawRectOutline(280,128+256,256,32,{0,0,0,0.5},{0.5,0.5,0.5,0.5}) -- chat input (mockup, replace with textbox)
             drawRectOutline(280+256,128+256,80,32,{0.25,0.25,0.25,1},{0.5,0.5,0.5,1}) -- send button (mockup, replace with textbox)
             love.graphics.setColor({1,1,1,1})
             love.graphics.printf("Send",280+256,128+256+8,80,"center")
@@ -159,13 +191,15 @@ function networkmenustate.draw()
     end
 end
 
-function networkmenustate.keypressed(key)
+function lobbystate.keypressed(key)
     if (key == "return") then -- press enter to toggle if ready
         ready = not ready
         if (ready == true) then
             net.clientpeer:send(gmpacket.encode("IMREADY", {}))
+            sndready:play()
         else
             net.clientpeer:send(gmpacket.encode("IMNOTREADY", {}))
+            sndnotready:play()
         end
     end
 
@@ -173,6 +207,17 @@ function networkmenustate.keypressed(key)
 
     if key == "d" then
         if debughold then debug = not debug end
+    end
+
+    if key == "m" then
+        musmuted = not musmuted
+        if musmuted then
+            music:setVolume(0)
+            _CAState.printmsg("Music muted",3)
+        else
+            music:setVolume(1.0)
+            _CAState.printmsg("Music un-muted",3)
+        end
     end
 
     if key == "escape" then
@@ -184,16 +229,18 @@ function networkmenustate.keypressed(key)
             net.clientpeer:disconnect_now()
             _NAOnline = false
         end
+        netmenu.stopMusic()
         love.window.setTitle("KleleAtoms 1.3 (NAtoms)")
+        love.window.setIcon(kaicon)
         _CAState.change("menu")
     end
 end
 
-function networkmenustate.keyreleased(key)
+function lobbystate.keyreleased(key)
     if key == "lctrl" then debughold = false end
 end
 
-function networkmenustate.mousepressed(x, y, button)
+function lobbystate.mousepressed(x, y, button)
     if _CAIsMobile then
         ready = not ready
         if (ready == true) then
@@ -204,10 +251,10 @@ function networkmenustate.mousepressed(x, y, button)
     end
 end
 
-function networkmenustate.mousereleased(x, y, button)
+function lobbystate.mousereleased(x, y, button)
 end
 
-function networkmenustate.quit()
+function lobbystate.quit()
     net.clientpeer:disconnect_now()
     if (net.mode == "Server") then
         if net.enethost ~= nil then
@@ -216,4 +263,4 @@ function networkmenustate.quit()
     end
 end
 
-return networkmenustate
+return lobbystate
