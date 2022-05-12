@@ -7,7 +7,8 @@ local function isAdmin(plyr)
 end
 
 function command.help(plyr,args)
-    return "Help message goes here"
+    net.enethost:get_peer(plyr[1]):send(gmpacket.encode("CHATALERT",{"Commands:"}))
+    net.enethost:get_peer(plyr[1]):send(gmpacket.encode("CHATALERT",{"/help - displays this message"}))
 end
 
 function command.login(plyr,args)
@@ -34,9 +35,10 @@ function command.kick(plyr,args)
     if not isAdmin(plyr) then return "You don't have access to that command!" end
     if not args[1] or args[1] == "" then return "Usage: /kick <nick>" end
     local target = net.getPlayerByNick(args[1])
+    if target[2] == plyr[2] then return "You can't kick yourself from the game!" end
     if target then
         net.enethost:get_peer(target[1]):disconnect(8)
-        net.enethost:broadcast(gmpacket.encode("MESSAGE",{"Server","Player "..target[2].." has been kicked from the server."}))
+        net.enethost:broadcast(gmpacket.encode("CHATALERT",{"Player "..target[2].." has been kicked from the server."}))
     else
         return "Player "..args[1].." not found!"
     end

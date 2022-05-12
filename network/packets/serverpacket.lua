@@ -13,14 +13,6 @@ function sp.public.AUTH(event,data)
         return
     end
     
-    -- remove the peer from the auth list
-    for i, v in pairs(net.authList) do
-        if v[1] == event.peer then
-            table.remove(net.authList, i)
-            break
-        end
-    end
-    
     if #net.players>=4 then
         event.peer:disconnect_now(9)
         return
@@ -30,14 +22,35 @@ function sp.public.AUTH(event,data)
         event.peer:disconnect_now(10)
         return
     end
-    print("Player " .. data[2] .. " authenticated.")
-    net.addPlayerToPlayerList( event.peer, data[2] )
 
-    if event.peer:index() == 1 then
+    -- remove the peer from the auth list
+    for i, v in pairs(net.authList) do
+        if v[1] == event.peer then
+            table.remove(net.authList, i)
+            break
+        end
+    end
+    
+    print("Player " .. data[2] .. " authenticated.")
+    local newnick = nil
+    for i, p in pairs(net.players) do
+        if p[2] == data[2] then
+            newnick = data[2].."2"
+            print("There already exists a player with the same nick! Changing...")
+            break
+        end
+    end
+    if newnick then
+        net.addPlayerToPlayerList( event.peer, newnick )
+    else
+        net.addPlayerToPlayerList( event.peer, data[2] )
+    end
+
+    if event.peer:index() == 1 then     -- add player 1 to the operator list
         table.insert(net.super,{event.peer:index(),data[2],tostring(event.peer)})
     end
 
-    event.peer:send( gmpacket.encode( "COOLANDGOOD", {event.peer:index()} ) )
+    event.peer:send( gmpacket.encode( "COOLANDGOOD", {event.peer:index(),newnick} ) )
 end
 
 function sp.public.PING(event,data)
@@ -147,31 +160,17 @@ function sp.MESSAGE(event,data)
     end
 end
 
-function sp.IMREADY(event,data)
+function sp.READY(event,data)
     local plyrnick
     for i, p in ipairs(net.players) do
         if p[1] == event.peer:index() then
             plyrnick = p[2]
-            net.players[i][3] = true
+            net.players[i][3] = data[1]
             break
         end
     end
 
-    net.enethost:broadcast(gmpacket.encode("READY", {plyrnick, true}))
-    net.enethost:broadcast(gmpacket.encode("PLYRS", net.playerListToArray(net.players)))
-end
-
-function sp.IMNOTREADY(event,data)
-    local plyrnick
-    for i, p in ipairs(net.players) do
-        if (p[1] == event.peer:index()) then
-            plyrnick = p[2]
-            net.players[i][3] = false
-            break
-        end
-    end
-
-    net.enethost:broadcast(gmpacket.encode("READY", {plyrnick, false}))
+    net.enethost:broadcast(gmpacket.encode("READY", {plyrnick, data[1]}))
     net.enethost:broadcast(gmpacket.encode("PLYRS", net.playerListToArray(net.players)))
 end
 

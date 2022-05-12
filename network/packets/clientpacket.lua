@@ -1,6 +1,7 @@
 local cp = {}
 
 function cp.COOLANDGOOD(event,data)
+    if data[2] then _NAPlayerNick = data[2] end
     net.connected = true
     net.yourindex = data[1]
     net.netmenu.setBgColor(net.yourindex)
@@ -64,11 +65,18 @@ end
 function cp.MESSAGE(event,data)
     local plyrnick = data[1]
     local message = data[2]
-    _CAState.printmsg("<"..plyrnick.."> "..message,3)
+    local string = "<"..plyrnick.."> "..message
+    local plyr = net.getPlayerByNick(plyrnick)
+    if plyr then
+        table.insert(net.chatlog,{net.netmenu.playercolor[plyr[1]],string})
+    else
+        table.insert(net.chatlog,string)
+    end
+    _CAState.printmsg(string,3)
 end
 
 function cp.CHATALERT(event,data)
-    _CAState.printmsg(data[1],3)
+    table.insert(net.chatlog,data[1])
 end
 
 function cp.PLYRS(event,data)

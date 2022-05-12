@@ -9,7 +9,7 @@ nah.snddisconn = love.audio.newSource("sounds/natoms/disconnect.wav","static")
 nah.sndcountdown = love.audio.newSource("sounds/natoms/countdown.wav","static")
 
 
-nah.version = "a1.1.3"
+nah.version = "a1.1.4"
 nah.serverpacket = require "network.packets.serverpacket"
 nah.clientpacket = require "network.packets.clientpacket"
 nah.commands = require "network.commands"
@@ -37,6 +37,7 @@ function nah.resetVars()
     nah.prevplayerturn = nil
     nah.youravatar = nil
     nah.urav = nil
+    nah.chatlog = {}
 
     -- hooks
     nah.gamelogic = nil
@@ -52,6 +53,7 @@ end
 function nah.addPlayerToPlayerList(p,nick)
     table.insert(nah.players, p:index(), {p:index(), nick, false})
     nah.enethost:broadcast(gmpacket.encode("PLYRS", nah.playerListToArray(nah.players)))
+    nah.enethost:broadcast(gmpacket.encode("CHATALERT",{nick.." connected to the game."}))
     nah.enethost:broadcast(gmpacket.encode("CONN", {nick}))
 end
 
@@ -157,6 +159,7 @@ function nah.ServerThinker(dt)
         -- every time the countdown increments each second, send a message to all players
         if math.ceil(nah.countdown) ~= math.ceil(nah.countdown - dt) then
             nah.enethost:broadcast(gmpacket.encode("COUNTING", {math.floor(nah.countdown)}))
+            nah.enethost:broadcast(gmpacket.encode("CHATALERT",{"Game starting in " .. math.floor(nah.countdown) .. " second(s)."}))
         end
 
         if (nah.countdown <= 0) then
@@ -219,6 +222,7 @@ function nah.ServerThinker(dt)
             end
             nah.enethost:broadcast(gmpacket.encode("PLYRS", nah.playerListToArray(nah.players)))
             nah.enethost:broadcast(gmpacket.encode("DISCONN", {pnick, nah.hostevent.peer:index()}))
+            nah.enethost:broadcast(gmpacket.encode("CHATALERT",{pnick.." disconnected from the game."}))
         end
 
         if nah.hostevent.type == "receive" then
@@ -284,8 +288,7 @@ function nah.ClientThinker(dt)
             else
                 if nah.clientevent.data == 8 then
                     love.window.showMessageBox("Connection error", "You have been kicked from the server!", "error")
-                end
-                if nah.clientevent.data == 100 then
+                elseif nah.clientevent.data == 100 then
                     love.window.showMessageBox("Connection error", "Server closed!", "error")
                 else
                     love.window.showMessageBox("Connection error", "Disconnected from server. ("..nah.clientevent.data..")", "error")
