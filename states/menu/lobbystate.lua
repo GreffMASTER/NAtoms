@@ -21,11 +21,12 @@ local music = love.audio.newSource("music/NetworkAtoms.it", "stream")
 local bgcolor = {1, 1, 1, 1}
 local mbglayer = love.graphics.newQuad(0, 0, 640, 480, 128, 128)
 local bg_spd = 32
-local ready = false
 local muspos = 0
 local musmuted = false
 
 local netmenu = {}  -- for use outside of lobby state
+
+netmenu.ready = false
 
 netmenu.images = {
     [0] = love.graphics.newImage("graphics/natoms/bgnatoms.png"),
@@ -72,7 +73,7 @@ function lobbystate.init()
     love.window.setTitle("NAtoms")
     love.window.setIcon(naicon)
     curimg = mbgnatoms
-    ready = false
+    netmenu.ready = false
     if not _NAOnline then -- check if the handler is not elready running
         bgcolor = {1, 1, 1, 1}
         net.init()
@@ -116,10 +117,6 @@ function lobbystate.update(dt)
         if muspos > 28.68 then music:seek(19.12) end
     else
         if muspos > 38.14 then music:seek(28.56) end
-        --[[if not music:isPlaying() then
-            music:play()
-            music:seek(28.56)
-        end]]
     end
 
     -- server/client logic
@@ -193,8 +190,8 @@ end
 
 function lobbystate.keypressed(key)
     if (key == "return") then -- press enter to toggle if ready
-        ready = not ready
-        if (ready == true) then
+        netmenu.ready = not netmenu.ready
+        if netmenu.ready then
             net.clientpeer:send(gmpacket.encode("IMREADY", {}))
             sndready:play()
         else
@@ -207,6 +204,10 @@ function lobbystate.keypressed(key)
 
     if key == "d" then
         if debughold then debug = not debug end
+    end
+
+    if key == "h" then
+        if debughold then net.clientpeer:send(gmpacket.encode("MESSAGE",{"Hello World!"})) end
     end
 
     if key == "m" then
@@ -242,8 +243,8 @@ end
 
 function lobbystate.mousepressed(x, y, button)
     if _CAIsMobile then
-        ready = not ready
-        if (ready == true) then
+        netmenu.ready = not netmenu.ready
+        if netmenu.ready == true then
             net.clientpeer:send(gmpacket.encode("IMREADY", {}))
         else
             net.clientpeer:send(gmpacket.encode("IMNOTREADY", {}))
