@@ -4,12 +4,14 @@ stuff = require "stuff"
 
 local nah = {}
 
+local kaicon = love.image.newImageData("graphics/icon.png")
+
 nah.sndconn = love.audio.newSource("sounds/natoms/connect.wav","static")
 nah.snddisconn = love.audio.newSource("sounds/natoms/disconnect.wav","static")
 nah.sndcountdown = love.audio.newSource("sounds/natoms/countdown.wav","static")
 
 
-nah.version = "a1.1.4"
+nah.version = "a1.2"
 nah.serverpacket = require "network.packets.serverpacket"
 nah.clientpacket = require "network.packets.clientpacket"
 nah.commands = require "network.commands"
@@ -37,6 +39,7 @@ function nah.resetVars()
     nah.prevplayerturn = nil
     nah.youravatar = nil
     nah.urav = nil
+    nah.startplayer = 1
     nah.chatlog = {}
 
     -- hooks
@@ -73,11 +76,28 @@ function nah.getPlayerByNick(nick)
     end
 end
 
+function nah.disconnect()
+    _CAState.printmsg("Disconnecting...", 3)
+    if nah.mode == "Server" then
+        nah.stopServer()
+    end
+    if nah.mode == "Client" then
+        nah.clientpeer:disconnect_now()
+        _NAOnline = false
+    end
+    love.window.setTitle("KleleAtoms 1.3 (NAtoms)")
+    love.window.setIcon(kaicon)
+    _CAState.change("menu")
+end
+
 function nah.init()
     nah.resetVars()
     if _NAHostIP ~= nil then
-        nah.startServer()
-        nah.mode = "Server"
+        if nah.startServer() then
+            nah.mode = "Server"
+        else
+            return false
+        end
     elseif _NAServerIP ~= nil then
 
         print("Connecting to " .. _NAServerIP..":".._NAPort)
@@ -116,24 +136,29 @@ function nah.startServer()
 
     if nah.enethost == nil then -- the server could not create a host
         love.window.showMessageBox("Server Error","Failed to start the server. Perhaps a server is already running on " .. _NAHostIP .. "?", "error")
-        love.event.quit()
+        _CAState.printmsg("",0)
+        _CAState.change("menu")
+        return false
     end
 
     nah.enetclient = enet.host_create()
     nah.clientpeer = nah.enetclient:connect(_NAHostIP..":".._NAPort)
+    return true
 end
 
 function nah.stopServer()
-    -- disconnect all peers
-    for i=1,4 do
-        if nah.enethost:get_peer(i) then
-            nah.enethost:get_peer(i):disconnect_now(100)
+    if nah.enethost then
+        -- disconnect all peers
+        for i=1,4 do
+            if nah.enethost:get_peer(i) then
+                nah.enethost:get_peer(i):disconnect_now(100)
+            end
         end
+        nah.enethost:flush()
+        nah.enethost:destroy()
+        nah.enethost = nil
     end
     love.audio.play(nah.snddisconn)
-    nah.enethost:flush()
-    nah.enethost:destroy()
-    nah.enethost = nil
     nah.enetclient = nil
     _NAOnline = false
 end
@@ -163,14 +188,25 @@ function nah.ServerThinker(dt)
         end
 
         if (nah.countdown <= 0) then
+            if #nah.players < 2 then return end
             nah.ingame = true
             nah.countdown = 6
             local calc = 0
             for i = 1, #nah.players do
                 calc = calc + 2 ^ (nah.players[i][1] - 1)
             end
+            local curplayer = nah.startplayer
+            if nah.startplayer == "random" then
+                curplayer = nah.players[love.math.random(1,#nah.players)][1]
+            end
+            while not nah.getPlayerByIndex(curplayer) do
+                curplayer = curplayer + 1
+                if curplayer > 4 then
+                    curplayer = 1
+                end
+            end
             -- reset all players ready state
-            nah.enethost:broadcast(gmpacket.encode("START", {_CAGridW, _CAGridH, calc}))
+            nah.enethost:broadcast(gmpacket.encode("START", {_CAGridW, _CAGridH, calc, curplayer}))
         end
     else
         nah.countdown = 6

@@ -1,21 +1,58 @@
 local command = {}
 
+local serverPassword = "" --Temporary
+
 local function isAdmin(plyr)
     for i,p in pairs(net.super) do
         if p[1] == plyr[1] and p[2] == plyr[2] and p[3] == plyr[3] then return true end
     end
 end
 
+local function consolePrint(plyr,str)
+    net.enethost:get_peer(plyr[1]):send(gmpacket.encode("CHATALERT",{str}))
+end
+
 function command.help(plyr,args)
-    net.enethost:get_peer(plyr[1]):send(gmpacket.encode("CHATALERT",{"Commands:"}))
-    net.enethost:get_peer(plyr[1]):send(gmpacket.encode("CHATALERT",{"/help - displays this message"}))
+    consolePrint(plyr,"Commands:")
+    consolePrint(plyr,"/help - displays this message")
+    consolePrint(plyr,"/login <password> - login to be a server operator")
+    consolePrint(plyr,"/msg <nick> <message> - send a private message")
+    consolePrint(plyr,"/password [password] - set or check admin password")
+    consolePrint(plyr,"/kick <nickname> - kick a player")
+    consolePrint(plyr,"/forceready - force all players to be ready")
+    consolePrint(plyr,"/startplayer [1/2/3/4/random] - set starting player")
+    consolePrint(plyr,"/quit - quit to menu")
+end
+
+function command.password(plyr,args) -- Created by Nightwolf-47
+    if not isAdmin(plyr) then return "You don't have access to that command!" end
+    if not args[1] or args[1] == "" then return "Password: "..serverPassword end
+    serverPassword = args[1]
+    return "Admin password changed."
+end
+
+function command.startplayer(plyr,args)
+    if not args[1] or args[1] == "" then return "Current value: "..net.startplayer end
+    if not isAdmin(plyr) then return "You can not modify this CVar!" end
+    if tonumber(args[1]) then
+        local pnum = tonumber(args[1])
+        if pnum >= 1 and pnum <= 4 then
+            net.startplayer = pnum
+        else
+            return "Invalid player number "..pnum
+        end
+    elseif args[1]:lower() == "random" then
+        net.startplayer = "random"
+    else
+        return "Usage: /startplayer [1/2/3/4/random]"
+    end
 end
 
 function command.login(plyr,args)
     if not args[1] or args[1] == "" then return "Usage: /login <password>" end
     if isAdmin(plyr) then return "You are already a server operator" end
 
-    if args[1] == "supersecretpassword" then    -- replace with actual global password variable
+    if args[1] == serverPassword then    -- replace with actual global password variable
         table.insert(net.super,plyr)
         print("Player "..plyr[2].." is now a server operator!")
         return "You are now a server operator!"

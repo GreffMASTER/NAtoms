@@ -32,14 +32,17 @@ function sp.public.AUTH(event,data)
     end
     
     print("Player " .. data[2] .. " authenticated.")
-    local newnick = nil
-    for i, p in pairs(net.players) do
-        if p[2] == data[2] then
-            newnick = data[2].."2"
-            print("There already exists a player with the same nick! Changing...")
-            break
+    local newnick = data[2]
+    for j=1,4 do
+        for i, p in pairs(net.players) do
+            if p[2] == newnick then
+                newnick = data[2]..tostring(j+1) 
+                print("There already exists a player with the same nick! Changing...")
+                break
+            end
         end
     end
+
     if newnick then
         net.addPlayerToPlayerList( event.peer, newnick )
     else

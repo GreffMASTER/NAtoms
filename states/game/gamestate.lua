@@ -14,6 +14,8 @@ local hourglass = love.graphics.newImage("graphics/natoms/hourglass.png")
 
 local eye = love.graphics.newImage("graphics/natoms/eye.png")
 
+local naback = love.graphics.newImage("graphics/natoms/naback.png")
+
 local ailevelquads = { --Quads for drawing only a part of cplayerai2 texture depending on AI difficulty
     love.graphics.newQuad(0,0,10,50,cplayerai2:getDimensions()), --Easy (AI 1)
     love.graphics.newQuad(0,0,14,50,cplayerai2:getDimensions()), --Medium (AI 2)
@@ -179,11 +181,11 @@ function gamestate.draw() --Draw all stuff, move animated atoms and calculate at
     if _NAOnline then -- NAtoms
         love.graphics.setColor(1,1,1,1)
         if net.disqualified then
-            love.graphics.draw(eye)
+            love.graphics.draw(eye,gamelogic.winsize[1]-24,24)
         else
             if net.waiting then
                 love.graphics.setColor(1,1,1,1)
-                love.graphics.draw(hourglass)
+                love.graphics.draw(hourglass,gamelogic.winsize[1]-24,24)
             end
         end
     end
@@ -196,17 +198,21 @@ function gamestate.draw() --Draw all stuff, move animated atoms and calculate at
     if tutorial then gametut.draw() end
     if not _NAOnline then 
         love.graphics.draw(cback,2,2)
+    else
+        love.graphics.draw(naback,2,2)
     end
     if gamelogic.paused then gamepause.draw() end
 end
 
 function gamestate.keyreleased(key)
     if restarttime >= 0.3 then
-        if key == "m" then
-            if not _NAOnline then
+        if key == "m" or (key == "escape" and _NAOnline) then
+            if _NAOnline then
+                net.disconnect()
+            else
                 _CAState.change("menu")
             end
-        elseif key == "escape" and gamestate.playerwon == 0 and not gamelogic.paused then
+        elseif key == "escape" and gamelogic.playerwon == 0 and not gamelogic.paused then
             if not _NAOnline then
                 pauseGame()
             end
@@ -220,13 +226,7 @@ function gamestate.mousepressed(x, y, button)
     local gw = #gamelogic.grid
     local gh = #gamelogic.grid[1]
     if gamelogic.playerwon ~= 0 or (x >= 0 and x <= 44 and y <= 44) then
-        if not _NAOnline then
-            exiting = button
-        else
-            if gamelogic.playerwon ~= 0 then
-                exiting = button
-            end
-        end
+        exiting = button
     else
         if tutorial and gametut.mousepressed(x,y,button) then 
             return
@@ -257,7 +257,11 @@ function gamestate.mousereleased(x,y,button)
     if exiting == button then
         if gamelogic.playerwon == 0 then
             exiting = nil
-            pauseGame()
+            if not _NAOnline then
+                pauseGame()
+            else
+                net.disconnect()
+            end
         else
             if not _NAOnline then
                 _CAState.change("menu")
@@ -272,10 +276,7 @@ end
 
 function gamestate.quit()
     if(_NAOnline) then
-        net.clientpeer:disconnect_now()
-        if(net.mode=="Server") then
-            net.stopServer()
-        end
+        net.disconnect()
     end
 end
 

@@ -1,33 +1,94 @@
 local lobbystate = {}
 
-local ctrlhold = false
+local buttonpressed = nil --Button pressed number (or nil if none)
+local buttonrepeat = nil --If the button is a repeating action, it's not nil
+local buttontimer = 0.0 --Button repeat timer
+local isbackspace = false --Is backspace held?
+local bptimer = 0.0 --Backspace repeat timer
 local input = false
 -- graphics
 local naicon = love.image.newImageData("graphics/natoms/naicon.png")
-local kaicon = love.image.newImageData("graphics/icon.png")
 local mbg = love.graphics.newImage("graphics/natoms/m_bgcustom.png")
 local mnalogo = love.graphics.newImage("graphics/natoms/m_nalogo.png")
 local mplayer = love.graphics.newImage("graphics/m_player.png")
 local defaultav = love.graphics.newImage("graphics/natoms/defaultav.png")
 local mbgnatoms = love.graphics.newImage("graphics/natoms/bgnatoms.png")
 local mready = love.graphics.newImage("graphics/natoms/ready.png")
+local mgh = love.graphics.newImage("graphics/m_gh.png")
+local mgw = love.graphics.newImage("graphics/m_gw.png")
 local curimg = mbgnatoms
 curimg:setWrap("repeat", "repeat", "repeat")
+local chatcontents = love.graphics.newCanvas(336,256)
 -- sounds and music
 local sndready = love.audio.newSource("sounds/natoms/ready.wav","static")
 local sndnotready = love.audio.newSource("sounds/natoms/notready.wav","static")
 local music = love.audio.newSource("music/NetworkAtoms.it", "stream")
+local sndclick = love.audio.newSource("sounds/click.wav","static")
 -- variables
 local bgcolor = {1, 1, 1, 1}
 local mbglayer = love.graphics.newQuad(0, 0, 640, 480, 128, 128)
 local bg_spd = 32
 local muspos = 0
 local musmuted = false
+local chatfont = love.graphics.newFont(12)
 
 local chatinput = _NATextBox.newObject(love.graphics.newFont(14),48)
 
 local netmenu = {}  -- for use outside of lobby state
 
+local function moveStep(varname,min,max) --Add 1 to value, set to minimal value if too high
+    _G[varname] = _G[varname] + 1
+    if min > max then min, max = max, min end
+    if _G[varname] > max then
+        _G[varname] = min
+    end
+end
+
+local function moveStepBack(varname,min,max) --Remove 1 from value, set to max value if too low
+    _G[varname] = _G[varname] - 1
+    if min > max then min, max = max, min end
+    if _G[varname] < min then
+        _G[varname] = max
+    end
+end
+
+local function readyFunc()
+    netmenu.ready = not netmenu.ready
+    net.clientpeer:send(gmpacket.encode("READY", {netmenu.ready}))
+    if netmenu.ready then love.audio.play(sndready) else love.audio.play(sndnotready) end
+    return nil
+end
+
+local function readyColorFunc()
+    if netmenu.ready then return "READY",{1,1,1,1} else return "READY",{0,0,0,1} end
+end
+
+local function gwFunc(button)
+    if button == 2 then
+        moveStepBack("_CAGridW",7,30)
+    else
+        moveStep("_CAGridW",7,30)
+    end
+    return button
+end
+
+local function ghFunc(button)
+    if button == 2 then
+        moveStepBack("_CAGridH",4,20)
+    else
+        moveStep("_CAGridH",4,20)
+    end
+    return button
+end
+
+--icon/nil, hostOnly, x, y, width, height, func(mouse_button) -> repeatButton[, colorfunc() -> value,color]
+-- OR
+--icon/nil, hostOnly, x, y, width, height, func(mouse_button) -> repeatButton, global_value_name
+local buttons = {
+    {nil,false,10,300,128,144,readyFunc,readyColorFunc},
+    {mgw,true,148,300,122,64,gwFunc,"_CAGridW"},
+    {mgh,true,148,380,122,64,ghFunc,"_CAGridH"},
+}
 
 netmenu.ready = false
 
@@ -72,7 +133,46 @@ local function drawRectOutline(x,y,w,h,colbg,colout)
     love.graphics.setColor({1,1,1,1})
 end
 
+local function findCommand(inputstr)
+    local result = inputstr
+    for k,v in pairs(net.commands) do
+        if type(k) == "string" then
+            local found = k:find(inputstr,1,true)
+            if found == 1 then
+                result = k
+            end
+        end
+    end
+    return result
+end
+
+local function chatDraw()
+    love.graphics.clear()
+    love.graphics.setBlendMode("alpha", "premultiplied")
+    love.graphics.setColor(1,1,1,1)
+    local linenum = 1
+    local msgnum = #net.chatlog
+    local drawy = 252
+    local ttext = love.graphics.newText(chatfont)
+    repeat
+        if not net.chatlog[msgnum] then break end
+        local slines = 1
+        ttext:setf(net.chatlog[msgnum],336,"left")
+        slines = math.ceil(ttext:getHeight()/chatfont:getHeight())
+        drawy = drawy - slines*14
+        love.graphics.draw(ttext,0,drawy)
+        linenum = linenum + slines
+        msgnum = msgnum - 1
+    until(linenum > 18)
+    love.graphics.setBlendMode("alpha", "alphamultiply")
+end
+
 function lobbystate.init()
+    isbackspace = false
+    bptimer = 0.0
+    buttonpressed = nil
+    buttonrepeat = nil
+    buttontimer = 0.0
     love.window.setTitle("NAtoms")
     love.window.setIcon(naicon)
     curimg = mbgnatoms
@@ -100,6 +200,23 @@ function lobbystate.init()
 end
 
 function lobbystate.update(dt)
+    -- timers
+    if isbackspace then bptimer = bptimer + dt end
+    if buttonrepeat then buttontimer = buttontimer + dt end
+
+    -- button repeat stuff
+    if buttonrepeat and buttontimer >= 0.1 then
+        buttontimer = 0.0
+        buttons[buttonpressed][7](buttonrepeat)
+        love.audio.play(sndclick)
+    end
+
+    -- backspace repeat stuff
+    if input and isbackspace and bptimer >= 0.05 then
+        bptimer = 0.0
+        chatinput:eraselast()
+    end
+
     -- scrolling layer stuff
     local offx, offy = mbglayer:getViewport()
     if offx <= -128 then
@@ -112,6 +229,9 @@ function lobbystate.update(dt)
 
     -- music stuff
     muspos = music:tell("seconds")
+
+    -- chatbox stuff
+    chatcontents:renderTo(chatDraw)
     
     if #net.players == 1 then
         if muspos > 9.56 then music:seek(0) end
@@ -140,8 +260,8 @@ function lobbystate.draw()
     love.graphics.setColor(1, 1, 1, 1)
     love.graphics.draw(curimg, mbglayer) -- draw scrolling layer
     love.graphics.draw(mnalogo, 300, 0, 0, 0.75, 0.75)
-    love.graphics.printf("Players", _CAFont24, 4, 0 ,256,"left")
     if net.connected then
+        love.graphics.printf("Players", _CAFont24, 4, 0 ,256,"left")
         for i=0,3 do
             if net.players[i+1] then    -- draw open bar with player data (colored player icon, ready status, nick and avatar)
                 player = net.players[i+1]
@@ -188,21 +308,47 @@ function lobbystate.draw()
         end
         love.graphics.setColor({1,1,1,1})
         -- chatbox can display 18 lines (14 font)
-        for i=0, 17 do
-            local str = nil
-            if net.chatlog[#net.chatlog-i] then
-                str = net.chatlog[#net.chatlog-i]
-            end
-            if str then
-                love.graphics.printf(str,282,(384-18)-(i*14),336+999,"left")
+
+        love.graphics.draw(chatcontents,280,128)
+
+        --Draw buttons
+        for k,v in ipairs(buttons) do
+            if not v[2] or (v[2] and net.mode == "Server") then
+                mx, my = _CAState.getMousePos()
+                if buttonpressed == k or (mx >= v[3] and mx < v[3]+v[5] and my >= v[4] and my <= v[4]+v[6]) then
+                    drawRectOutline(v[3],v[4],v[5],v[6],{0,0,0,0.5},{0.3,0.3,0.3,0.5})
+                else
+                    drawRectOutline(v[3],v[4],v[5],v[6],{0,0,0,0.5},{0.5,0.5,0.5,0.5})
+                end
+                local ncolor = {1,1,1,1}
+                local value = ""
+                if type(v[8]) == "function" then
+                    local tempval
+                    tempval, ncolor = v[8]() --colorfunc()
+                    if tempval ~= nil then value = tostring(tempval) end
+                else
+                    if _G[v[8]] ~= nil then value = tostring(_G[v[8]]) end
+                end
+                local y = ((v[6] - _CAFont24:getHeight()) / 2) + v[4]
+                if v[1] and v[1]:typeOf("Texture") then
+                    love.graphics.draw(v[1],v[3],v[4])
+                    local iw = v[1]:getWidth()
+                    love.graphics.setColor(ncolor)
+                    love.graphics.printf(value,_CAFont24,v[3]+iw,y,v[5]-iw,"center")
+                else
+                    love.graphics.setColor(ncolor)
+                    love.graphics.printf(value,_CAFont24,v[3],y,v[5],"center")
+                end
             end
         end
 
+        love.graphics.setColor(1,1,1,1)
+
         if _CAIsMobile then
             local wx,wy = _CAState.getWindowSize()
-            love.graphics.print("Touch your player box to switch your ready state", 10, wy - 20)
+            love.graphics.print("Touch the ready button to switch your ready state. Press the back button to disconnect.", 10, wy - 20)
         else
-            love.graphics.print("Click your player box or press enter to switch your ready state", 10, love.graphics.getHeight() - 20)
+            love.graphics.print("Click the ready button to switch your ready state. Press escape key to disconnect.", 10, love.graphics.getHeight() - 20)
         end
     end
 end
@@ -217,14 +363,15 @@ function lobbystate.keypressed(key)
         else
             netmenu.ready = not netmenu.ready
             net.clientpeer:send(gmpacket.encode("READY", {netmenu.ready}))
+            if netmenu.ready then love.audio.play(sndready) else love.audio.play(sndnotready) end
         end
     end
 
-    if key == "backspace" then
-        if input then chatinput:eraselast() end
+    if input and key == "backspace" then
+        chatinput:eraselast()
+        isbackspace = true
+        bptimer = -0.15
     end
-
-    if key == "lctrl" then ctrlhold = true end
 
     if key == "m" then
         if not input then
@@ -240,42 +387,41 @@ function lobbystate.keypressed(key)
     end
 
     if key == "escape" then
-        _CAState.printmsg("Disconnecting...", 3)
-        if net.mode == "Server" then
-            net.stopServer()
+        net.disconnect()
+    end
+
+    if key == "tab" then
+        if input and chatinput.input:len() > 1 and chatinput.input:sub(1,1) == "/" then
+            chatinput:setString("/"..findCommand(chatinput.input:sub(2,-1)))
         end
-        if net.mode == "Client" then
-            net.clientpeer:disconnect_now()
-            _NAOnline = false
-        end
-        netmenu.stopMusic()
-        love.window.setTitle("KleleAtoms 1.3 (NAtoms)")
-        love.window.setIcon(kaicon)
-        _CAState.change("menu")
     end
 end
 
 function lobbystate.keyreleased(key)
-    if key == "lctrl" then ctrlhold = false end
+    if key == "backspace" then
+        isbackspace = false
+        bptimer = 0.0
+    end
 end
 
 function lobbystate.mousepressed(x, y, button)
-    if _CAIsMobile then
-        netmenu.ready = not netmenu.ready
-        net.clientpeer:send(gmpacket.encode("READY", {netmenu.ready}))
+    for k,v in ipairs(buttons) do
+        if x >= v[3] and x < v[3]+v[5] and y >= v[4] and y < v[4]+v[6] then
+            buttonpressed = k
+            buttonrepeat = v[7](button)
+            if buttonrepeat then buttontimer = -0.1 end
+            love.audio.play(sndclick)
+        end
     end
 end
 
 function lobbystate.textinput(t)
-    chatinput:write(t)
+    if input and chatinput:curWidth() <= 332 then
+        chatinput:write(t)
+    end
 end
 
 function lobbystate.mousereleased(x, y, button)
-    if x >= 0 and x < 256 and y >= 32+((net.yourindex-1)*64) and y < 96+((net.yourindex-1)*64) then
-        netmenu.ready = not netmenu.ready
-        net.clientpeer:send(gmpacket.encode("READY", {netmenu.ready}))
-    end
-
     if x >= 280 and x < 280+256+80 and y >= 384 and y < 384+20 then
         input = true
         love.keyboard.setTextInput(input)
@@ -283,15 +429,16 @@ function lobbystate.mousereleased(x, y, button)
         input = false
         love.keyboard.setTextInput(input)
     end
+
+    if buttonpressed then
+        buttontimer = 0.0
+        buttonrepeat = nil
+        buttonpressed = nil
+    end
 end
 
 function lobbystate.quit()
-    net.clientpeer:disconnect_now()
-    if (net.mode == "Server") then
-        if net.enethost ~= nil then
-            net.stopServer()
-        end
-    end
+    net.disconnect()
 end
 
 return lobbystate

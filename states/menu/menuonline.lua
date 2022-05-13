@@ -188,7 +188,7 @@ function menuonline.keypressed(key)
                 love.system.setClipboardText(textboxes[selTB].input)
                 textboxes[selTB]:clear()
             elseif key == "v" then
-                textboxes[selTB]:setString(string.gsub(love.system.getClipboardText(),"%c",""))
+                textboxes[selTB]:setString(string.gsub(love.system.getClipboardText(),"%c+",""):gsub("%s+",""))
             end
         end
 
@@ -241,7 +241,7 @@ function menuonline.mousereleased(x,y,button)
 end
 
 function menuonline.textinput(t)
-    if selTB and textboxes[selTB] and not string.find(t,"%c") then
+    if selTB and textboxes[selTB] and not string.find(t,"%c+") and not string.find(t,"%s+") then
         textboxes[selTB]:write(t)
         if textboxes[selTB]:curWidth() > tbpos[selTB][3]-4 then
             textboxes[selTB]:eraselast()
@@ -259,10 +259,13 @@ function menuonline.filedropped(file)
             local loadedimg = love.graphics.newImage(data)
             local canvas = love.graphics.newCanvas(64,64)
             canvas:renderTo(function()
+                love.graphics.clear()
+                love.graphics.setBlendMode("alpha", "premultiplied")
                 love.graphics.setColor(1,1,1,1)
                 love.graphics.scale(64/loadedimg:getWidth(),64/loadedimg:getHeight())
                 love.graphics.draw(loadedimg)
                 love.graphics.scale(1,1)
+                love.graphics.setBlendMode("alpha", "alphamultiply")
             end)
             local avatardata = canvas:newImageData()
             avatardata:encode("png","avatar.png")

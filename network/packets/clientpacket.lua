@@ -1,7 +1,6 @@
 local cp = {}
 
 function cp.COOLANDGOOD(event,data)
-    if data[2] then _NAPlayerNick = data[2] end
     net.connected = true
     net.yourindex = data[1]
     net.netmenu.setBgColor(net.yourindex)
@@ -117,10 +116,10 @@ function cp.READY(event,data)
     if not net.ingame then
         if data[2] then
             _CAState.printmsg(data[1] .. " is ready.", 4)
-            if net.getPlayerByNick(data[1])[2] == _NAPlayerNick then net.netmenu.ready = true end
+            if net.getPlayerByNick(data[1])[1] == net.yourindex then net.netmenu.ready = true end
         elseif not data[2] then
             _CAState.printmsg(data[1] .. " is not ready.", 4)
-            if net.getPlayerByNick(data[1])[2] == _NAPlayerNick then net.netmenu.ready = false end
+            if net.getPlayerByNick(data[1])[1] == net.yourindex then net.netmenu.ready = false end
         end
         
         net.netmenu.setImage(0)
@@ -144,9 +143,13 @@ function cp.START(event,data)
     net.resetPlayersReady(net.players)
     net.netmenu.stopMusic()
     _CAState.change("game")
+    if data[4] then
+        net.gamelogic.curplayer = data[4]
+    end
     if net.gamelogic.curplayer ~= net.yourindex then
         net.waiting = true
     end
+    net.disqualified = false
 end
 
 -- GAMELOGIC STUFF

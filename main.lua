@@ -45,15 +45,15 @@ end
 
 local function checkValidNetOptions() --Checks if net (NAtoms) settings are valid
     if _NAHostIP then
-        _NAHostIP = _NAHostIP:gsub("%c",""):sub(1,24)
+        _NAHostIP = _NAHostIP:gsub("%c+",""):sub(1,24)
     end
     if _NAServerIP then
-        _NAServerIP = _NAServerIP:gsub("%c",""):sub(1,24)
+        _NAServerIP = _NAServerIP:gsub("%c+",""):sub(1,24)
     end
     local tnum = math.floor(tonumber(_NAPort) or 5047)
     tnum = math.min(math.max(tnum, 1025), 49150)
     _NAPort = tostring(tnum)
-    _NAPlayerNick = utf8.sub(_NAPlayerNick:gsub("%c",""),1,16)
+    _NAPlayerNick = utf8.sub(_NAPlayerNick:gsub("%c+",""):gsub("%s+",""),1,16)
 end
 
 local function checkSetValues() --Checks if values are in a valid range
