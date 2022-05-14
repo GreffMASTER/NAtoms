@@ -14,6 +14,7 @@ local mplayer = love.graphics.newImage("graphics/m_player.png")
 local defaultav = love.graphics.newImage("graphics/natoms/defaultav.png")
 local mbgnatoms = love.graphics.newImage("graphics/natoms/bgnatoms.png")
 local mready = love.graphics.newImage("graphics/natoms/ready.png")
+local mop = love.graphics.newImage("graphics/natoms/op.png")
 local mgh = love.graphics.newImage("graphics/m_gh.png")
 local mgw = love.graphics.newImage("graphics/m_gw.png")
 local curimg = mbgnatoms
@@ -81,11 +82,21 @@ local function ghFunc(button)
     return button
 end
 
+local function quitFunc(button)
+    net.disconnect()
+    return button
+end
+
+local function quitText()
+    return "QUIT",{1,1,1,1}
+end
+
 --icon/nil, hostOnly, x, y, width, height, func(mouse_button) -> repeatButton[, colorfunc() -> value,color]
 -- OR
 --icon/nil, hostOnly, x, y, width, height, func(mouse_button) -> repeatButton, global_value_name
 local buttons = {
-    {nil,false,10,300,128,144,readyFunc,readyColorFunc},
+    {nil,false,10,300,128,64,readyFunc,readyColorFunc},
+    {nil,false,10,380,128,64,quitFunc,quitText},
     {mgw,true,148,300,122,64,gwFunc,"_CAGridW"},
     {mgh,true,148,380,122,64,ghFunc,"_CAGridH"},
 }
@@ -260,6 +271,7 @@ function lobbystate.draw()
     love.graphics.setColor(1, 1, 1, 1)
     love.graphics.draw(curimg, mbglayer) -- draw scrolling layer
     love.graphics.draw(mnalogo, 300, 0, 0, 0.75, 0.75)
+    love.graphics.printf("v."..net.version, 570, 76 ,70,"left")
     if net.connected then
         love.graphics.printf("Players", _CAFont24, 4, 0 ,256,"left")
         for i=0,3 do
@@ -267,15 +279,15 @@ function lobbystate.draw()
                 player = net.players[i+1]
                 plyrid = player[1]
 
-                drawRectOutline(0,(i*64)+32,256,64,{0.2,0.2,0.2,1},{0.5,0.5,0.5,1})
+                drawRectOutline(0,(i*64)+32,256,64,{0,0,0,0.5},{0.5,0.5,0.5,0.5})
                 love.graphics.setColor(netmenu.playercolor[plyrid])
                 love.graphics.draw(mplayer,0,(i*64)+32)
                 love.graphics.setColor({1,1,1,1})
-
+                if plyrid == 1 then love.graphics.draw(mop,19,(i*64)+18) end
                 if player then
-                    love.graphics.printf(tostring(player[2]), _CAFont16, 52, (i * 64)+56,128,"center")
+                    love.graphics.printf(player[2], _CAFont16, 60, (i * 64)+56,128,"center")
                     if player[3] then   -- if player ready
-                        love.graphics.draw(mready,0,(i*64)+32)
+                        love.graphics.draw(mready,19,(i*64)+64)
                     end
                 end
 
@@ -290,7 +302,7 @@ function lobbystate.draw()
                 end
                 
             else    -- draw closed bar with gray player icon
-                drawRectOutline(0,(i*64)+32,64,64,{0.2,0.2,0.2,1},{0.5,0.5,0.5,1})
+                drawRectOutline(0,(i*64)+32,64,64,{0,0,0,0.5},{0.5,0.5,0.5,0.5})
                 love.graphics.draw(mplayer,0,(i*64)+32)
             end
             
@@ -346,9 +358,9 @@ function lobbystate.draw()
 
         if _CAIsMobile then
             local wx,wy = _CAState.getWindowSize()
-            love.graphics.print("Touch the ready button to switch your ready state. Press the back button to disconnect.", 10, wy - 20)
+            love.graphics.print("Touch the ready button to switch your ready state. Touch the quit button to leave the game.", 10, wy - 20)
         else
-            love.graphics.print("Click the ready button to switch your ready state. Press escape key to disconnect.", 10, love.graphics.getHeight() - 20)
+            love.graphics.print("Click the ready button to switch your ready state. Click the quit button to leave the game.", 10, love.graphics.getHeight() - 20)
         end
     end
 end
@@ -373,6 +385,21 @@ function lobbystate.keypressed(key)
         bptimer = -0.15
     end
 
+    if key == "t" then
+        if not input then
+            input = true
+            love.keyboard.setTextInput(input)
+        end
+    end
+    
+    if key == "/" then
+        if not input then
+            input = true
+            love.keyboard.setTextInput(input)
+            chatinput:setString("/")
+        end
+    end
+
     if key == "m" then
         if not input then
         musmuted = not musmuted
@@ -387,7 +414,13 @@ function lobbystate.keypressed(key)
     end
 
     if key == "escape" then
-        net.disconnect()
+        if input then
+            input = false
+            chatinput:clear()
+            love.keyboard.setTextInput(input)
+        else
+            net.disconnect()
+        end
     end
 
     if key == "tab" then
@@ -406,11 +439,13 @@ end
 
 function lobbystate.mousepressed(x, y, button)
     for k,v in ipairs(buttons) do
-        if x >= v[3] and x < v[3]+v[5] and y >= v[4] and y < v[4]+v[6] then
-            buttonpressed = k
-            buttonrepeat = v[7](button)
-            if buttonrepeat then buttontimer = -0.1 end
-            love.audio.play(sndclick)
+        if not v[2] or (v[2] and net.mode == "Server") then
+            if x >= v[3] and x < v[3]+v[5] and y >= v[4] and y < v[4]+v[6] then
+                buttonpressed = k
+                buttonrepeat = v[7](button)
+                if buttonrepeat then buttontimer = -0.1 end
+                love.audio.play(sndclick)
+            end
         end
     end
 end
@@ -427,6 +462,7 @@ function lobbystate.mousereleased(x, y, button)
         love.keyboard.setTextInput(input)
     else
         input = false
+        chatinput:clear()
         love.keyboard.setTextInput(input)
     end
 
@@ -435,6 +471,18 @@ function lobbystate.mousereleased(x, y, button)
         buttonrepeat = nil
         buttonpressed = nil
     end
+end
+
+function lobbystate.focus(focus)
+    if not focus then
+        input = false
+        chatinput:clear()
+        love.keyboard.setTextInput(input)
+    end
+end
+
+function lobbystate.stop()
+    netmenu.stopMusic()
 end
 
 function lobbystate.quit()

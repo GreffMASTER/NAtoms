@@ -2,7 +2,8 @@ utf8 = require("utf8")
 
 --Extension to utf8 table, string.sub for utf-8 strings
 function utf8.sub(s,i,j)
-    j = j or #s-1
+    j = j or #s
+    if j == -1 then j = #s end
     return string.sub(s,(utf8.offset(s,i) or #s+1),(utf8.offset(s,j+1) or #s+1)-1)
 end
 

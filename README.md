@@ -8,14 +8,15 @@ This fork implements online multiplayer to KleleAtoms thru UDP using ENet.
 
 ## Features
 - Play KleleAtoms with your buddies (up to 4 players)
-- Avatar system
 - Player lobby (waiting room)
-
-## Planned Features
+- Avatar system
 - Chat system
-- Dedicated server mode
+- Chat commands
 - Admin tools
+
+## Possible Planned Features
 - Vote system
+- Dedicated server mode
 
 ## Aditional notes
 In order to host a server, you need to have a public ip and an open UDP port on your router (default 5047).  

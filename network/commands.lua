@@ -1,6 +1,12 @@
 local command = {}
 
 local serverPassword = "" --Temporary
+local ballresponses = {"It is certain.","It is decidedly so.","Without a doubt.",
+                        "Yes definitely.","You may rely on it.","As I see it, yes.",
+                        "Most likely.","Outlook good.","Yes.","Signs point to yes.",
+                        "Reply hazy, try again.","Ask again later.","Better not tell you now.",
+                        "Cannot predict now.","Concentrate and ask again.","Don't count on it.",
+                        "My reply is no.","My sources say no.","Outlook not so good.","Very doubtful."}
 
 local function isAdmin(plyr)
     for i,p in pairs(net.super) do
@@ -21,7 +27,8 @@ function command.help(plyr,args)
     consolePrint(plyr,"/kick <nickname> - kick a player")
     consolePrint(plyr,"/forceready - force all players to be ready")
     consolePrint(plyr,"/startplayer [1/2/3/4/random] - set starting player")
-    consolePrint(plyr,"/quit - quit to menu")
+    consolePrint(plyr,"/magic8ball <text> - ask a magic 8 ball")
+    consolePrint(plyr,"/clearchat - clears the chat for all players")
 end
 
 function command.password(plyr,args) -- Created by Nightwolf-47
@@ -38,11 +45,13 @@ function command.startplayer(plyr,args)
         local pnum = tonumber(args[1])
         if pnum >= 1 and pnum <= 4 then
             net.startplayer = pnum
+            return "Starting player set to "..args[1].."."
         else
             return "Invalid player number "..pnum
         end
     elseif args[1]:lower() == "random" then
         net.startplayer = "random"
+        return "Starting player set to random."
     else
         return "Usage: /startplayer [1/2/3/4/random]"
     end
@@ -50,9 +59,12 @@ end
 
 function command.login(plyr,args)
     if not args[1] or args[1] == "" then return "Usage: /login <password>" end
-    if isAdmin(plyr) then return "You are already a server operator" end
+    if isAdmin(plyr) then return "You are already a server operator." end
 
     if args[1] == serverPassword then    -- replace with actual global password variable
+        for k,v in pairs(net.super) do
+            consolePrint(plyr,plyr[2].." is now a server operator!")
+        end
         table.insert(net.super,plyr)
         print("Player "..plyr[2].." is now a server operator!")
         return "You are now a server operator!"
@@ -63,15 +75,10 @@ function command.login(plyr,args)
 end
 
 function command.kick(plyr,args)
-    local admin
-    for i,p in pairs(net.super) do
-        if p == plyr then admin = true end
-        break
-    end
-
     if not isAdmin(plyr) then return "You don't have access to that command!" end
     if not args[1] or args[1] == "" then return "Usage: /kick <nick>" end
     local target = net.getPlayerByNick(args[1])
+    if target[1] == 1 then return "You can't kick the host from the game!" end
     if target[2] == plyr[2] then return "You can't kick yourself from the game!" end
     if target then
         net.enethost:get_peer(target[1]):disconnect(8)
@@ -103,6 +110,24 @@ function command.forceready(plyr,args)  -- Created by Nightwolf-47
         net.enethost:broadcast(gmpacket.encode("READY", {p[2], true}))
     end
     net.enethost:broadcast(gmpacket.encode("PLYRS", net.playerListToArray(net.players)))
+    return "Forced all players to be Ready."
+end
+
+function command.magic8ball(plyr,args)
+    if not args[1] or args[1] == "" then return "Usage: /magic8ball <text>" end
+    local message = ""
+    for i=1, #args do   -- construct the message from argument parts
+        message = message..args[i].." "
+    end
+    net.enethost:broadcast(gmpacket.encode("MESSAGE",{plyr[2],"My Magic 8 Ball, "..message}))
+    local response = ballresponses[math.random(1,#ballresponses)]
+    net.enethost:broadcast(gmpacket.encode("MESSAGE",{"Magic8Ball",response}))
+end
+
+function command.clearchat(plyr,args)
+    if not isAdmin(plyr) then return "You don't have access to that command!" end
+    net.enethost:broadcast(gmpacket.encode("CLEARCHAT",{}))
+    return "Chat cleared."
 end
 
 return command

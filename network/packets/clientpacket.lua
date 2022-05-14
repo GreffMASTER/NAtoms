@@ -71,11 +71,15 @@ function cp.MESSAGE(event,data)
     else
         table.insert(net.chatlog,string)
     end
-    _CAState.printmsg(string,3)
+    --_CAState.printmsg(string,3)
 end
 
 function cp.CHATALERT(event,data)
     table.insert(net.chatlog,data[1])
+end
+
+function cp.CLEARCHAT(event,data)
+    net.chatlog = {}
 end
 
 function cp.PLYRS(event,data)
@@ -141,7 +145,6 @@ function cp.START(event,data)
 
     net.setupPlayers(data[3])
     net.resetPlayersReady(net.players)
-    net.netmenu.stopMusic()
     _CAState.change("game")
     if data[4] then
         net.gamelogic.curplayer = data[4]
