@@ -146,12 +146,10 @@ end
 
 local function findCommand(inputstr)
     local result = inputstr
-    for k,v in pairs(net.commands) do
-        if type(k) == "string" then
-            local found = k:find(inputstr,1,true)
-            if found == 1 then
-                result = k
-            end
+    for k,v in pairs(net.commandlist) do
+        local found = v:find(inputstr,1,true)
+        if found == 1 then
+            result = v
         end
     end
     return result

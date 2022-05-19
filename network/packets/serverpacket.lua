@@ -43,17 +43,27 @@ function sp.public.AUTH(event,data)
         end
     end
 
-    if newnick then
-        net.addPlayerToPlayerList( event.peer, newnick )
-    else
-        net.addPlayerToPlayerList( event.peer, data[2] )
-    end
+    net.addPlayerToPlayerList( event.peer, newnick )
 
     if event.peer:index() == 1 then     -- add player 1 to the operator list
-        table.insert(net.super,{event.peer:index(),data[2],tostring(event.peer)})
+        table.insert(net.super,{1,data[2],tostring(event.peer)})
     end
 
     event.peer:send( gmpacket.encode( "COOLANDGOOD", {event.peer:index(),newnick} ) )
+
+    local tcom = {unpack(net.cmdlst.public)}
+    print(net.cmdlst.public[6])
+    if event.peer:index() == 1 then     -- give player 1 all the commands
+        for k,v in ipairs(net.cmdlst.private) do
+            table.insert(tcom, v)
+        end
+    end
+
+    local cmdstr = ""
+    for k,v in ipairs(tcom) do    -- convert the table into string
+        cmdstr = cmdstr..v..";"
+    end
+    event.peer:send( gmpacket.encode( "COMMANDS", {cmdstr} ) )
 end
 
 function sp.public.PING(event,data)

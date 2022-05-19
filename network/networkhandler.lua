@@ -11,10 +11,11 @@ nah.snddisconn = love.audio.newSource("sounds/natoms/disconnect.wav","static")
 nah.sndcountdown = love.audio.newSource("sounds/natoms/countdown.wav","static")
 
 
-nah.version = "a1.2.1"
+nah.version = "a1.2.2"
 nah.serverpacket = require "network.packets.serverpacket"
 nah.clientpacket = require "network.packets.clientpacket"
-nah.commands = require "network.commands"
+nah.commands = require("network.commands")[1]
+nah.cmdlst = require("network.commands")[2]
 
 nah.authList = {}
 
@@ -41,7 +42,7 @@ function nah.resetVars()
     nah.urav = nil
     nah.startplayer = 1
     nah.chatlog = {}
-
+    nah.commandlist = {}
     -- hooks
     nah.gamelogic = nil
     nah.netmenu = nil

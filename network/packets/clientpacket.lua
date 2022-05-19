@@ -78,10 +78,6 @@ function cp.CHATALERT(event,data)
     table.insert(net.chatlog,data[1])
 end
 
-function cp.CLEARCHAT(event,data)
-    net.chatlog = {}
-end
-
 function cp.PLYRS(event,data)
     if net.mode ~= "Server" then
         local playerdata = {}
@@ -153,6 +149,28 @@ function cp.START(event,data)
         net.waiting = true
     end
     net.disqualified = false
+end
+
+function cp.NETVAR(event,data)
+    local varname = data[1]
+    local value = data[2]
+    if value == "\rtable" then value = {} end
+    local key1 = data[3] -- optional, used for tables
+    local key2 = data[4] -- optional, used for nested tables
+    if varname then
+        if key1 and key2 then
+            net[varname][key1][key2] = value
+        elseif key1 then
+            net[varname][key1] = value
+        else
+            net[varname] = value
+        end
+    end
+end
+
+function cp.COMMANDS(event,data)
+    net.commandlist = string.explode(data[1],";")
+    print("received commands:",data[1])
 end
 
 -- GAMELOGIC STUFF

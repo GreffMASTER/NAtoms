@@ -1,5 +1,17 @@
 local command = {}
 
+local cmdlst = {}
+
+cmdlst.public = {
+    "help","login","msg",
+    "startplayer","magic8ball"
+}
+
+cmdlst.private = {
+    "password","kick","forceready",
+    "clearchat"
+}
+
 local serverPassword = "" --Temporary
 local ballresponses = {"It is certain.","It is decidedly so.","Without a doubt.",
                         "Yes definitely.","You may rely on it.","As I see it, yes.",
@@ -23,12 +35,14 @@ function command.help(plyr,args)
     consolePrint(plyr,"/help - displays this message")
     consolePrint(plyr,"/login <password> - login to be a server operator")
     consolePrint(plyr,"/msg <nick> <message> - send a private message")
-    consolePrint(plyr,"/password [password] - set or check admin password")
-    consolePrint(plyr,"/kick <nickname> - kick a player")
-    consolePrint(plyr,"/forceready - force all players to be ready")
     consolePrint(plyr,"/startplayer [1/2/3/4/random] - set starting player")
     consolePrint(plyr,"/magic8ball <text> - ask a magic 8 ball")
-    consolePrint(plyr,"/clearchat - clears the chat for all players")
+    if isAdmin(plyr) then
+        consolePrint(plyr,"/password [password] - set or check admin password")
+        consolePrint(plyr,"/kick <nickname> - kick a player")
+        consolePrint(plyr,"/forceready - force all players to be ready")
+        consolePrint(plyr,"/clearchat - clears the chat for all players")
+    end
 end
 
 function command.password(plyr,args) -- Created by Nightwolf-47
@@ -61,11 +75,23 @@ function command.login(plyr,args)
     if not args[1] or args[1] == "" then return "Usage: /login <password>" end
     if isAdmin(plyr) then return "You are already a server operator." end
 
-    if args[1] == serverPassword then    -- replace with actual global password variable
+    if args[1] == serverPassword then
         for k,v in pairs(net.super) do
             consolePrint(plyr,plyr[2].." is now a server operator!")
         end
         table.insert(net.super,plyr)
+
+        local tcom = {unpack(net.cmdlst.public)}
+
+        for k,v in ipairs(net.cmdlst.private) do
+            table.insert(tcom, v)
+        end
+
+        local cmdstr = ""
+        for k,v in ipairs(tcom) do
+            cmdstr = cmdstr..v..";"
+        end
+        net.enethost:get_peer(plyr[1]):send( gmpacket.encode( "COMMANDS", {cmdstr} ) )
         print("Player "..plyr[2].." is now a server operator!")
         return "You are now a server operator!"
     else
@@ -126,8 +152,8 @@ end
 
 function command.clearchat(plyr,args)
     if not isAdmin(plyr) then return "You don't have access to that command!" end
-    net.enethost:broadcast(gmpacket.encode("CLEARCHAT",{}))
+    net.enethost:broadcast(gmpacket.encode("NETVAR",{"chatlog","\rtable"}))
     return "Chat cleared."
 end
 
-return command
+return {command,cmdlst}
