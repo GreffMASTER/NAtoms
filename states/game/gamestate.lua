@@ -38,6 +38,13 @@ local pausing = false --Will the game pause next turn?
 
 local tutorial = false --Is tutorial active?
 
+local typing = false --Are you typing a message? (online only)
+
+local bptimer = 0.0 --Backspace hold timer
+
+local isbackspace = false --Is backspace held?
+
+local msgbox = _NATextBox.newObject(_CAFont16,48,"> ")
 
 local function getGameTime()
     return string.format("%0.2d:%0.2d",math.floor(restarttime / 60),math.floor(restarttime % 60))
@@ -59,6 +66,9 @@ local function pauseGame()
 end
 
 function gamestate.init(laststate,argtab)
+    bptimer = 0.0
+    isbackspace = false
+    typing = false
     exiting = nil
     pausing = false
     tutorial = false
@@ -94,6 +104,18 @@ function gamestate.update(dt)
     end
     -- NAtoms
     if _NAOnline then
+        if gamelogic.playerwon ~= 0 then
+            isbackspace = false
+            typing = false
+            love.keyboard.setTextInput(false)
+        end
+        if isbackspace then
+            bptimer = bptimer + dt
+            if bptimer >= 0.05 then
+                bptimer = 0.0
+                msgbox:eraselast()
+            end
+        end
         if net.mode == "Server" then
             net.ServerThinker(dt)
         end
@@ -200,12 +222,37 @@ function gamestate.draw() --Draw all stuff, move animated atoms and calculate at
         love.graphics.draw(cback,2,2)
     else
         love.graphics.draw(naback,2,2)
+        if typing then
+            love.graphics.setColor(0,1,0,1)
+            msgbox:draw(2,50,true)
+            love.graphics.setColor(1,1,1,1)
+        end
     end
     if gamelogic.paused then gamepause.draw() end
 end
 
+function gamestate.keypressed(key)
+    if typing and key == "backspace" then
+        msgbox:eraselast()
+        isbackspace = true
+        bptimer = -0.15
+    end
+end
+
 function gamestate.keyreleased(key)
-    if restarttime >= 0.3 then
+    if typing and _NAOnline then
+        if key == "return" then
+            typing = false
+            if utf8.sub(msgbox.input,1,1) == "/" then
+                msgbox:setString(utf8.sub(msgbox.input,2,-1))
+            end
+            net.clientpeer:send(gmpacket.encode("MESSAGE",{msgbox.input}))
+            love.keyboard.setTextInput(false)
+        elseif key == "escape" then
+            typing = false
+            love.keyboard.setTextInput(false)
+        end
+    elseif not typing and restarttime >= 0.3 then
         if key == "m" or (key == "escape" and _NAOnline) then
             if _NAOnline then
                 net.disconnect()
@@ -216,7 +263,18 @@ function gamestate.keyreleased(key)
             if not _NAOnline then
                 pauseGame()
             end
+        elseif key == "t" then
+            if _NAOnline then
+                typing = true
+                love.keyboard.setTextInput(true)
+                msgbox:clear()
+                isbackspace = false
+            end
         end
+    end
+    if key == "backspace" then
+        isbackspace = false
+        bptimer = 0.0
     end
     if tutorial then gametut.keyreleased(key) end
     if gamelogic.paused then gamepause.keyreleased(key) end
@@ -274,9 +332,24 @@ end
 
 -- NAtoms
 
+function gamestate.stop()
+    if _NAOnline then
+        love.keyboard.setTextInput(false)
+    end
+end
+
 function gamestate.quit()
     if(_NAOnline) then
         net.disconnect()
+    end
+end
+
+function gamestate.textinput(t)
+    if typing and not string.find(t,"%c+") then
+        msgbox:write(t)
+        if msgbox:curWidth() > gamelogic.winsize[1]-4 then
+            msgbox:eraselast()
+        end
     end
 end
 

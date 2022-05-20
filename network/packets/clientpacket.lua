@@ -64,14 +64,16 @@ end
 function cp.MESSAGE(event,data)
     local plyrnick = data[1]
     local message = data[2]
-    local string = "<"..plyrnick.."> "..message
+    local str = "<"..plyrnick.."> "..message
     local plyr = net.getPlayerByNick(plyrnick)
     if plyr then
-        table.insert(net.chatlog,{net.netmenu.playercolor[plyr[1]],string})
+        table.insert(net.chatlog,{net.netmenu.playercolor[plyr[1]],str})
     else
-        table.insert(net.chatlog,string)
+        table.insert(net.chatlog,str)
     end
-    --_CAState.printmsg(string,3)
+    if net.ingame then
+        _CAState.printmsg(str,4)
+    end
 end
 
 function cp.CHATALERT(event,data)
