@@ -156,6 +156,9 @@ function gamestate.draw() --Draw all stuff, move animated atoms and calculate at
             else
                 love.graphics.draw(cplayer,xpos,ypos)
             end
+            if _NAOnline then   -- Display nicks of players
+                if net.players[i] then love.graphics.printf(net.players[i][2],xpos-50,ypos+50,128,"center") end
+            end
         end
     end
     for x = 1,#gamelogic.grid do
@@ -202,11 +205,10 @@ function gamestate.draw() --Draw all stuff, move animated atoms and calculate at
     end
     if _NAOnline then -- NAtoms
         love.graphics.setColor(1,1,1,1)
-        if net.disqualified then
+        if net.disqualified then    -- Draw spectate icon when player is disqualified
             love.graphics.draw(eye,gamelogic.winsize[1]-24,24)
         else
-            if net.waiting then
-                love.graphics.setColor(1,1,1,1)
+            if net.waiting then     -- Draw hourglass icon if the player is waiting for his turn
                 love.graphics.draw(hourglass,gamelogic.winsize[1]-24,24)
             end
         end
