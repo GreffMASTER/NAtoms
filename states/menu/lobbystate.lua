@@ -14,6 +14,8 @@ local mplayer = love.graphics.newImage("graphics/m_player.png")
 local defaultav = love.graphics.newImage("graphics/natoms/defaultav.png")
 local mbgnatoms = love.graphics.newImage("graphics/natoms/bgnatoms.png")
 local mready = love.graphics.newImage("graphics/natoms/ready.png")
+local mmuson = love.graphics.newImage("graphics/natoms/namuson.png")
+local mmusoff = love.graphics.newImage("graphics/natoms/namusoff.png")
 local mop = love.graphics.newImage("graphics/natoms/op.png")
 local mgh = love.graphics.newImage("graphics/m_gh.png")
 local mgw = love.graphics.newImage("graphics/m_gw.png")
@@ -351,9 +353,12 @@ function lobbystate.draw()
                 end
             end
         end
-
         love.graphics.setColor(1,1,1,1)
-
+        if not musmuted then
+            love.graphics.draw(mmuson,594,434)
+        else
+            love.graphics.draw(mmusoff,594,434)
+        end
         if _CAIsMobile then
             local wx,wy = _CAState.getWindowSize()
             love.graphics.print("Touch the ready button to switch your ready state. Touch the quit button to leave the game.", 10, wy - 20)
@@ -444,6 +449,17 @@ function lobbystate.mousepressed(x, y, button)
                 if buttonrepeat then buttontimer = -0.1 end
                 love.audio.play(sndclick)
             end
+        end
+    end
+
+    if x >= 594 and y >= 434 then
+        musmuted = not musmuted
+        if musmuted then
+            music:setVolume(0)
+            _CAState.printmsg("Music muted",3)
+        else
+            music:setVolume(1.0)
+            _CAState.printmsg("Music un-muted",3)
         end
     end
 end

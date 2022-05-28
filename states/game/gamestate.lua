@@ -16,6 +16,10 @@ local eye = love.graphics.newImage("graphics/natoms/eye.png")
 
 local naback = love.graphics.newImage("graphics/natoms/naback.png")
 
+local nachat = love.graphics.newImage("graphics/natoms/nachat.png")
+
+local lastplaced = love.graphics.newImage("graphics/natoms/lastplaced.png")
+
 local ailevelquads = { --Quads for drawing only a part of cplayerai2 texture depending on AI difficulty
     love.graphics.newQuad(0,0,10,50,cplayerai2:getDimensions()), --Easy (AI 1)
     love.graphics.newQuad(0,0,14,50,cplayerai2:getDimensions()), --Medium (AI 2)
@@ -203,8 +207,12 @@ function gamestate.draw() --Draw all stuff, move animated atoms and calculate at
             end
         end
     end
+
     if _NAOnline then -- NAtoms
         love.graphics.setColor(1,1,1,1)
+        local xlastpos = 10+(gamelogic.lastplacedpos[1]-1)*gamelogic.cGRIDSIZE
+        local ylastpos = 90+(gamelogic.lastplacedpos[2]-1)*gamelogic.cGRIDSIZE
+        love.graphics.draw(lastplaced,xlastpos,ylastpos)
         if net.disqualified then    -- Draw spectate icon when player is disqualified
             love.graphics.draw(eye,gamelogic.winsize[1]-24,24)
         else
@@ -213,6 +221,7 @@ function gamestate.draw() --Draw all stuff, move animated atoms and calculate at
             end
         end
     end
+
     if gamelogic.playerwon ~= 0 then 
         gamelogic.drawVictoryWin(getGameTime())
         return
@@ -224,6 +233,7 @@ function gamestate.draw() --Draw all stuff, move animated atoms and calculate at
         love.graphics.draw(cback,2,2)
     else
         love.graphics.draw(naback,2,2)
+        love.graphics.draw(nachat,48,2)
         if typing then
             love.graphics.setColor(0,1,0,1)
             msgbox:draw(2,50,true)
@@ -305,6 +315,14 @@ function gamestate.mousepressed(x, y, button)
                     end
                 end
             end
+        end
+    end
+    if _NAOnline then
+        if x >= 48 and y >= 2 and x <= 48+44 and y <= 2+44 and not typing then
+            typing = true
+            love.keyboard.setTextInput(true)
+            msgbox:clear()
+            isbackspace = false
         end
     end
 end

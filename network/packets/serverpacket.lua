@@ -126,13 +126,13 @@ end
 
 function sp.GETAV(event,data)
     local avindex = data[1]
-    avdata = net.avatars[avindex][2]
+    local avdata = net.avatars[avindex][2]
     event.peer:send(gmpacket.encode("AVATAR", {stuff.imgDataToB64(avdata),avdata:getFormat(),avindex}))
 end
 
 function sp.GETAVS(event,data)
     for i,av in pairs(net.avatars) do
-        if av then
+        if av and av[2] then
             local hash = love.data.encode("string", "hex", love.data.hash("sha256",av[2]))
             event.peer:send(gmpacket.encode("AVHASH",{hash,i}))
         end

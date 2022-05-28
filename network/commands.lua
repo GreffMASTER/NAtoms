@@ -9,7 +9,7 @@ cmdlst.public = {
 
 cmdlst.private = {
     "password","kick","forceready",
-    "clearchat"
+    "clearchat","op"
 }
 
 local serverPassword = "" --Temporary
@@ -42,6 +42,37 @@ function command.help(plyr,args)
         consolePrint(plyr,"/kick <nickname> - kick a player")
         consolePrint(plyr,"/forceready - force all players to be ready")
         consolePrint(plyr,"/clearchat - clears the chat for all players")
+        consolePrint(plyr,"/op <nickname> - make a player server operator")
+    end
+end
+
+function command.op(plyr,args)
+    if not isAdmin(plyr) then return "You don't have access to that command!" end
+    if not args[1] or args[1] == "" then return "Usage: /op <nickname>" end
+    local target = net.getPlayerByNick(args[1])
+    if target then
+        for k,v in pairs(net.super) do
+            consolePrint(v,target[2].." is now a server operator!")
+        end
+        local newplyr = {target[1],target[2],tostring(net.enethost:get_peer(target[1]))}
+
+        table.insert(net.super,newplyr)
+
+        local tcom = {unpack(net.cmdlst.public)}
+
+        for k,v in ipairs(net.cmdlst.private) do
+            table.insert(tcom, v)
+        end
+
+        local cmdstr = ""
+        for k,v in ipairs(tcom) do
+            cmdstr = cmdstr..v..";"
+        end
+        net.enethost:get_peer(target[1]):send( gmpacket.encode( "COMMANDS", {cmdstr} ) )
+        consolePrint(target,"You are now a server operator!")
+        print("Player "..target[2].." is now a server operator!")
+    else
+        return "Player "..args[1].." not found!"
     end
 end
 
@@ -77,7 +108,7 @@ function command.login(plyr,args)
 
     if args[1] == serverPassword then
         for k,v in pairs(net.super) do
-            consolePrint(plyr,plyr[2].." is now a server operator!")
+            consolePrint(v,plyr[2].." is now a server operator!")
         end
         table.insert(net.super,plyr)
 
@@ -104,9 +135,9 @@ function command.kick(plyr,args)
     if not isAdmin(plyr) then return "You don't have access to that command!" end
     if not args[1] or args[1] == "" then return "Usage: /kick <nick>" end
     local target = net.getPlayerByNick(args[1])
-    if target[1] == 1 then return "You can't kick the host from the game!" end
-    if target[2] == plyr[2] then return "You can't kick yourself from the game!" end
     if target then
+        if target[1] == 1 then return "You can't kick the host from the game!" end
+        if target[2] == plyr[2] then return "You can't kick yourself from the game!" end
         net.enethost:get_peer(target[1]):disconnect(8)
         net.enethost:broadcast(gmpacket.encode("CHATALERT",{"Player "..target[2].." has been kicked from the server."}))
     else

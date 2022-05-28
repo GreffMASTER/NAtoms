@@ -16,6 +16,8 @@ local checktab = { --Order of chain reaction checks
     {0,1},{0,-1},{1,0},{-1,0} --Down > Up > Right > Left
 }
 
+logic.lastplacedpos = {-99,-99}
+
 local ai = require("states.game.gameai")
 
 local function getWinSize(w,h) --Get screen/window size based on grid size
@@ -207,6 +209,7 @@ function logic.loadAll(gridWidth,gridHeight,pttab) --Reset most of the game stat
     logic.playeratoms = {}
     logic.playermoved = {}
     logic.players = 0
+    logic.lastplacedpos = {-99,-99}
     ai.playertab = {}
     ai.difficulty = {}
     ai.init(logic)
@@ -250,6 +253,8 @@ function logic.clickedTile(tx,ty,dontcheckai) --Callback called when a tile is c
     logic.expcount = 0
     logic.playermoved[logic.curplayer] = true
     love.audio.play(sndput)
+    logic.lastplacedpos[1] = tx
+    logic.lastplacedpos[2] = ty
     prepareNewAtoms(tx,ty)
 end
 
