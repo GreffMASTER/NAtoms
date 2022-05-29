@@ -278,4 +278,14 @@ function menuonline.filedropped(file)
     end
 end
 
+--Returns true if the online menu will close, false if not
+function menuonline.escPressed()
+    if isDragAndDrop then
+        isDragAndDrop = false
+        return false
+    else
+        return true
+    end
+end
+
 return menuonline

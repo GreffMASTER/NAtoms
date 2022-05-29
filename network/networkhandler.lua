@@ -11,7 +11,7 @@ nah.snddisconn = love.audio.newSource("sounds/natoms/disconnect.wav","static")
 nah.sndcountdown = love.audio.newSource("sounds/natoms/countdown.wav","static")
 
 
-nah.version = "a1.2.5"
+nah.version = "a1.2.6"
 nah.serverpacket = require "network.packets.serverpacket"
 nah.clientpacket = require "network.packets.clientpacket"
 nah.commands = require("network.commands")[1]

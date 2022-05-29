@@ -362,8 +362,10 @@ end
 function menustate.keypressed(key)
     if _CAOSType ~= "Web" and menutimer >= 0.3 and key == "escape" then
         if menuonline.isEnabled then
-            menuonline.isEnabled = false
-            menuonline.saveData()
+            if menuonline.escPressed() then
+                menuonline.isEnabled = false
+                menuonline.saveData()
+            end
         else
             love.event.quit(0)
         end
