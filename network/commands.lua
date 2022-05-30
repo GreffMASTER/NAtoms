@@ -51,10 +51,15 @@ function command.op(plyr,args)
     if not args[1] or args[1] == "" then return "Usage: /op <nickname>" end
     local target = net.getPlayerByNick(args[1])
     if target then
+        local newplyr = {target[1],target[2],tostring(net.enethost:get_peer(target[1]))}
+
+        for k,v in pairs(net.super) do
+            if v[1] == newplyr[1] and v[2] == newplyr[2] and v[3] == newplyr[3] then return "Player "..newplyr[2].." is already a server operator." end
+        end
+
         for k,v in pairs(net.super) do
             consolePrint(v,target[2].." is now a server operator!")
         end
-        local newplyr = {target[1],target[2],tostring(net.enethost:get_peer(target[1]))}
 
         table.insert(net.super,newplyr)
 

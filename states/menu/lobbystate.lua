@@ -359,12 +359,6 @@ function lobbystate.draw()
         else
             love.graphics.draw(mmusoff,594,434)
         end
-        if _CAIsMobile then
-            local wx,wy = _CAState.getWindowSize()
-            love.graphics.print("Touch the ready button to switch your ready state. Touch the quit button to leave the game.", 10, wy - 20)
-        else
-            love.graphics.print("Click the ready button to switch your ready state. Click the quit button to leave the game.", 10, love.graphics.getHeight() - 20)
-        end
     end
 end
 
@@ -452,8 +446,9 @@ function lobbystate.mousepressed(x, y, button)
         end
     end
 
-    if x >= 594 and y >= 434 then
+    if x >= 594 and y >= 434 and x <= 594+44 and y <= 434+44 then
         musmuted = not musmuted
+        love.audio.play(sndclick)
         if musmuted then
             music:setVolume(0)
             _CAState.printmsg("Music muted",3)
