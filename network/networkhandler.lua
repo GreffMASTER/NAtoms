@@ -11,7 +11,7 @@ nah.snddisconn = love.audio.newSource("sounds/natoms/disconnect.wav","static")
 nah.sndcountdown = love.audio.newSource("sounds/natoms/countdown.wav","static")
 
 
-nah.version = "a1.2.7"
+nah.version = "1.0-rc1"
 nah.serverpacket = require "network.packets.serverpacket"
 nah.clientpacket = require "network.packets.clientpacket"
 nah.commands = require("network.commands")[1]
@@ -100,10 +100,7 @@ function nah.init()
             return false
         end
     elseif _NAServerIP ~= nil then
-
-        print("Connecting to " .. _NAServerIP..":".._NAPort)
         _CAState.printmsg("Connecting to: " .. _NAServerIP..":".._NAPort, 40)
-
         nah.enetclient = enet.host_create()
         nah.clientpeer = nah.enetclient:connect(_NAServerIP..":".._NAPort)
         nah.mode = "Client"
@@ -114,12 +111,10 @@ function nah.init()
         if nah.urav:getWidth() == 64 and nah.urav:getWidth() == 64 then
             nah.youravatar = love.graphics.newImage(nah.urav)
         else
-            print("Avatar must be 64x64! Resetting to default avatar...")
             nah.urav = nil
             nah.youravatar = love.graphics.newImage("graphics/natoms/defaultav.png")
         end
     else
-        print("Avatar not found! Resetting to default avatar...")
         nah.youravatar = love.graphics.newImage("graphics/natoms/defaultav.png")
     end
     _NAOnline = true
@@ -225,15 +220,12 @@ function nah.ServerThinker(dt)
     end
     
     while nah.hostevent do
-        print("Server detected message type: " .. nah.hostevent.type)
-
         if nah.hostevent.type == "connect" then
             print(nah.hostevent.peer, "connected.")
             table.insert(nah.authList, {nah.hostevent.peer,5})
         end
 
         if nah.hostevent.type == "disconnect" then
-
             print(nah.hostevent.peer, "disconnected.")
             local pnick
             -- find player with id of peer index
@@ -263,33 +255,25 @@ function nah.ServerThinker(dt)
         end
 
         if nah.hostevent.type == "receive" then
-            print("Server received message: ", nah.hostevent.data, nah.hostevent.peer)
             local packet = gmpacket.decode(nah.hostevent.data)
-            
-
             if packet then
-
                 local byplayer = false
-
+                
                 for i, v in pairs(nah.players) do
                     if v[1] == nah.hostevent.peer:index() then
-                        print("send by player")
                         byplayer = true
                         break
                     end
                 end
 
-                print(nah.serverpacket.public)
                 if nah.serverpacket.public[packet["name"]] then
                     nah.serverpacket.public[packet["name"]](nah.hostevent,packet["data"])
                 end
 
                 if byplayer then -- allow only from players on the player list
-
                     if nah.serverpacket[packet["name"]] then
                         nah.serverpacket[packet["name"]](nah.hostevent,packet["data"])
                     end
-
                 end -- end of playertab check
             end
         end
@@ -302,8 +286,6 @@ function nah.ClientThinker(dt)
     nah.clientevent = nah.enetclient:service(1)
 
     while nah.clientevent do
-        print("Client detected message type: " .. nah.clientevent.type)
-
         if nah.clientevent.type == "connect" then
             local str = "NAtoms-v"..nah.version.."-"..gmpacket.version.."-ka13"
             local hash = love.data.encode("string", "hex", love.data.hash("sha256", str))
@@ -336,10 +318,7 @@ function nah.ClientThinker(dt)
         end
 
         if nah.clientevent.type == "receive" then
-            print("Client received message: ", nah.clientevent.data, nah.clientevent.peer)
-
             local packet = gmpacket.decode(nah.clientevent.data)
-            if packet == nil then print("GOT NIL!!!!!!!!") end
             if packet then
                 if nah.clientpacket[packet["name"]] then
                     nah.clientpacket[packet["name"]](nah.clientevent,packet["data"])

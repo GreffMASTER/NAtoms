@@ -1,1 +1,0 @@
-lovec . -connect localhost -nick Zdzichu

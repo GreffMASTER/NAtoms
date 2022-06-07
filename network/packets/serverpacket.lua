@@ -37,7 +37,6 @@ function sp.public.AUTH(event,data)
         for i, p in pairs(net.players) do
             if p[2] == newnick then
                 newnick = data[2]..tostring(j+1) 
-                print("There already exists a player with the same nick! Changing...")
                 break
             end
         end
@@ -77,7 +76,6 @@ end
 function sp.AVHASH(event,data)
     hash = data[1]
     if love.filesystem.getInfo("cache/"..hash..".png") then
-        print("Found avatar in cache")
         local avdata = love.image.newImageData("cache/"..hash..".png")
         local avimage = love.graphics.newImage(avdata)
 
@@ -89,7 +87,6 @@ function sp.AVHASH(event,data)
             end
         end
     else
-        print("Avatar not cached, requesting...")
         event.peer:send(gmpacket.encode("GETAV",{}))   
     end
 end
@@ -101,7 +98,6 @@ function sp.AVATAR(event,data)
         if avdata:getWidth() == 64 and avdata:getWidth() == 64 then
             local hash = love.data.encode("string", "hex", love.data.hash("sha256",avdata))
             avimage = love.graphics.newImage(avdata)
-
             love.filesystem.createDirectory("cache")
             avdata:encode("png","cache/"..hash..".png") -- save avatar with its hash as a name
         else
@@ -197,8 +193,6 @@ function sp.DONE(event,data)
 end
 
 function sp.CLICKEDTILE(event,data)
-    print("Player " .. event.peer:index() .. " wants to click tile " .. data[1] .. "," .. data[2])
-    print("Turn for player " .. net.gamelogic.curplayer)
     if event.peer:index() == net.gamelogic.curplayer and not net.gamelogic.animplaying then
         for i = 1, #net.playersdone do
             if net.playersdone[i] ~= 0 then
@@ -206,8 +200,6 @@ function sp.CLICKEDTILE(event,data)
             end
         end
         net.enethost:broadcast(gmpacket.encode("CLICKON", {data[1], data[2],event.peer:index()}))
-    else
-        print("ILLEGAL MOVE!!!")
     end
 end
 

@@ -172,7 +172,6 @@ end
 
 function cp.COMMANDS(event,data)
     net.commandlist = string.explode(data[1],";")
-    print("received commands:",data[1])
 end
 
 -- GAMELOGIC STUFF

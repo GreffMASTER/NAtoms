@@ -1,1 +1,0 @@
-lovec . -host localhost -nick ServerOwner

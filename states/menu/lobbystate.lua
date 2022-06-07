@@ -360,6 +360,7 @@ function lobbystate.draw()
             love.graphics.draw(mmusoff,594,434)
         end
     end
+    love.graphics.printf("Made by GreffMASTER",_CAFont16,4,460,630,"left")
 end
 
 function lobbystate.keypressed(key)
