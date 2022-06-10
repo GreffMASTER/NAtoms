@@ -26,6 +26,9 @@ You can also replace it manually by adding a 64x64 png image called `avatar.png`
 On Windows it should be in `%APPDATA%\LOVE\kleleatoms`  
 On Linux it should be in `~/.local/share/love/kleleatoms`  
 
+## How to install
+Download the [latest love file](https://github.com/GreffMASTER/NAtoms/releases/latest) and run it via Love2d executable.  
+
 ## Command line parameters
 `-gw <number>` - change grid width (7-30)  
 `-gh <number>` - change grid height (4-20)  
