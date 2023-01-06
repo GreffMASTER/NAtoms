@@ -51,7 +51,6 @@ function sp.public.AUTH(event,data)
     event.peer:send( gmpacket.encode( "COOLANDGOOD", {event.peer:index(),newnick} ) )
 
     local tcom = {unpack(net.cmdlst.public)}
-    print(net.cmdlst.public[6])
     if event.peer:index() == 1 then     -- give player 1 all the commands
         for k,v in ipairs(net.cmdlst.private) do
             table.insert(tcom, v)
@@ -133,6 +132,8 @@ function sp.GETAVS(event,data)
             event.peer:send(gmpacket.encode("AVHASH",{hash,i}))
         end
     end
+    local hash = love.data.encode("string", "hex", love.data.hash("sha256",net.avatars[1][2]))
+    event.peer:send(gmpacket.encode("AVHASH",{hash,1}))
 end
 
 -- OTHER STUFF

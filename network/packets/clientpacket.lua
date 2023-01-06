@@ -38,11 +38,12 @@ end
 
 function cp.AVATAR(event,data)
     local avindex = data[3]
+    local avimage = nil
     if data[1] then
         local avdata = stuff.B64ToData(data[1],data[2])
         if avdata:getWidth() == 64 and avdata:getWidth() == 64 then
             local hash = love.data.encode("string", "hex", love.data.hash("sha256",avdata))
-            local avimage = love.graphics.newImage(avdata)
+            avimage = love.graphics.newImage(avdata)
 
             love.filesystem.createDirectory("cache")
             avdata:encode("png","cache/"..hash..".png")

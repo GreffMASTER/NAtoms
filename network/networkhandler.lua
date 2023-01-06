@@ -11,7 +11,7 @@ nah.snddisconn = love.audio.newSource("sounds/natoms/disconnect.wav","static")
 nah.sndcountdown = love.audio.newSource("sounds/natoms/countdown.wav","static")
 
 
-nah.version = "1.0.1"
+nah.version = "1.0.2"
 nah.serverpacket = require "network.packets.serverpacket"
 nah.clientpacket = require "network.packets.clientpacket"
 nah.commands = require("network.commands")[1]
@@ -322,6 +322,8 @@ function nah.ClientThinker(dt)
             if packet then
                 if nah.clientpacket[packet["name"]] then
                     nah.clientpacket[packet["name"]](nah.clientevent,packet["data"])
+                else
+                    print("Error, unknown packet:", packet['name'])
                 end
             end
         end
