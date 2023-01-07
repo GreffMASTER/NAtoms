@@ -92,8 +92,9 @@ end
 
 function sp.AVATAR(event,data)
     local avimage
+    local avdata
     if data[1] then
-        local avdata = stuff.B64ToData(data[1],data[2])
+        avdata = stuff.B64ToData(data[1],data[2])
         if avdata:getWidth() == 64 and avdata:getWidth() == 64 then
             local hash = love.data.encode("string", "hex", love.data.hash("sha256",avdata))
             avimage = love.graphics.newImage(avdata)
@@ -132,8 +133,6 @@ function sp.GETAVS(event,data)
             event.peer:send(gmpacket.encode("AVHASH",{hash,i}))
         end
     end
-    local hash = love.data.encode("string", "hex", love.data.hash("sha256",net.avatars[1][2]))
-    event.peer:send(gmpacket.encode("AVHASH",{hash,1}))
 end
 
 -- OTHER STUFF

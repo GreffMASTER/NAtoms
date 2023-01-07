@@ -20,8 +20,6 @@ function cp.GETAV(event,data)
     net.clientpeer:send(gmpacket.encode("AVATAR", {stuff.imgDataToB64(net.urav),net.urav:getFormat()}))
 end
 
-
-
 function cp.AVHASH(event,data)
     local hash = data[1]
     local peerindex = data[2]

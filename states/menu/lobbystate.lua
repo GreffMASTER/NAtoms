@@ -364,49 +364,57 @@ function lobbystate.draw()
 end
 
 function lobbystate.keypressed(key)
-    if key == "return" then -- press enter to toggle if ready
-        if input then
-            if chatinput.input ~= "" then
-                net.clientpeer:send(gmpacket.encode("MESSAGE",{chatinput.input}))
-                chatinput:clear()
-            end
-        else
-            netmenu.ready = not netmenu.ready
-            net.clientpeer:send(gmpacket.encode("READY", {netmenu.ready}))
-            if netmenu.ready then love.audio.play(sndready) else love.audio.play(sndnotready) end
-        end
-    end
-
-    if input and key == "backspace" then
-        chatinput:eraselast()
-        isbackspace = true
-        bptimer = -0.15
-    end
-
-    if key == "t" then
-        if not input then
-            input = true
-            love.keyboard.setTextInput(input)
-        end
-    end
-    
-    if key == "/" then
-        if not input then
-            input = true
-            love.keyboard.setTextInput(input)
-            chatinput:setString("/")
-        end
-    end
-
-    if key == "m" then
-        if not input then
-        musmuted = not musmuted
-            if musmuted then
-                music:setVolume(0)
-                _CAState.printmsg("Music muted",3)
+    if net.connected then
+        if key == "return" then -- press enter to toggle if ready
+            if input then
+                if chatinput.input ~= "" then
+                    net.clientpeer:send(gmpacket.encode("MESSAGE",{chatinput.input}))
+                    chatinput:clear()
+                end
             else
-                music:setVolume(1.0)
-                _CAState.printmsg("Music un-muted",3)
+                netmenu.ready = not netmenu.ready
+                net.clientpeer:send(gmpacket.encode("READY", {netmenu.ready}))
+                if netmenu.ready then love.audio.play(sndready) else love.audio.play(sndnotready) end
+            end
+        end
+
+        if input and key == "backspace" then
+            chatinput:eraselast()
+            isbackspace = true
+            bptimer = -0.15
+        end
+
+        if key == "t" then
+            if not input then
+                input = true
+                love.keyboard.setTextInput(input)
+            end
+        end
+        
+        if key == "/" then
+            if not input then
+                input = true
+                love.keyboard.setTextInput(input)
+                chatinput:setString("/")
+            end
+        end
+
+        if key == "m" then
+            if not input then
+            musmuted = not musmuted
+                if musmuted then
+                    music:setVolume(0)
+                    _CAState.printmsg("Music muted",3)
+                else
+                    music:setVolume(1.0)
+                    _CAState.printmsg("Music un-muted",3)
+                end
+            end
+        end
+
+        if key == "tab" then
+            if input and chatinput.input:len() > 1 and chatinput.input:sub(1,1) == "/" then
+                chatinput:setString("/"..findCommand(chatinput.input:sub(2,-1)))
             end
         end
     end
@@ -420,66 +428,68 @@ function lobbystate.keypressed(key)
             net.disconnect()
         end
     end
-
-    if key == "tab" then
-        if input and chatinput.input:len() > 1 and chatinput.input:sub(1,1) == "/" then
-            chatinput:setString("/"..findCommand(chatinput.input:sub(2,-1)))
-        end
-    end
 end
 
 function lobbystate.keyreleased(key)
-    if key == "backspace" then
-        isbackspace = false
-        bptimer = 0.0
+    if net.connected then
+        if key == "backspace" then
+            isbackspace = false
+            bptimer = 0.0
+        end
     end
 end
 
 function lobbystate.mousepressed(x, y, button)
-    for k,v in ipairs(buttons) do
-        if not v[2] or (v[2] and net.mode == "Server") then
-            if x >= v[3] and x < v[3]+v[5] and y >= v[4] and y < v[4]+v[6] then
-                buttonpressed = k
-                buttonrepeat = v[7](button)
-                if buttonrepeat then buttontimer = -0.1 end
-                love.audio.play(sndclick)
+    if net.connected then
+        for k,v in ipairs(buttons) do
+            if not v[2] or (v[2] and net.mode == "Server") then
+                if x >= v[3] and x < v[3]+v[5] and y >= v[4] and y < v[4]+v[6] then
+                    buttonpressed = k
+                    buttonrepeat = v[7](button)
+                    if buttonrepeat then buttontimer = -0.1 end
+                    love.audio.play(sndclick)
+                end
             end
         end
-    end
 
-    if x >= 594 and y >= 434 and x <= 594+44 and y <= 434+44 then
-        musmuted = not musmuted
-        love.audio.play(sndclick)
-        if musmuted then
-            music:setVolume(0)
-            _CAState.printmsg("Music muted",3)
-        else
-            music:setVolume(1.0)
-            _CAState.printmsg("Music un-muted",3)
+        if x >= 594 and y >= 434 and x <= 594+44 and y <= 434+44 then
+            musmuted = not musmuted
+            love.audio.play(sndclick)
+            if musmuted then
+                music:setVolume(0)
+                _CAState.printmsg("Music muted",3)
+            else
+                music:setVolume(1.0)
+                _CAState.printmsg("Music un-muted",3)
+            end
         end
     end
 end
 
 function lobbystate.textinput(t)
-    if input and chatinput:curWidth() <= 332 then
-        chatinput:write(t)
+    if net.connected then
+        if input and chatinput:curWidth() <= 332 then
+            chatinput:write(t)
+        end
     end
 end
 
 function lobbystate.mousereleased(x, y, button)
-    if x >= 280 and x < 280+256+80 and y >= 384 and y < 384+20 then
-        input = true
-        love.keyboard.setTextInput(input)
-    else
-        input = false
-        chatinput:clear()
-        love.keyboard.setTextInput(input)
-    end
+    if net.connected then
+        if x >= 280 and x < 280+256+80 and y >= 384 and y < 384+20 then
+            input = true
+            love.keyboard.setTextInput(input)
+        else
+            input = false
+            chatinput:clear()
+            love.keyboard.setTextInput(input)
+        end
 
-    if buttonpressed then
-        buttontimer = 0.0
-        buttonrepeat = nil
-        buttonpressed = nil
+        if buttonpressed then
+            buttontimer = 0.0
+            buttonrepeat = nil
+            buttonpressed = nil
+        end
     end
 end
 

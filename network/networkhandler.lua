@@ -11,7 +11,7 @@ nah.snddisconn = love.audio.newSource("sounds/natoms/disconnect.wav","static")
 nah.sndcountdown = love.audio.newSource("sounds/natoms/countdown.wav","static")
 
 
-nah.version = "1.0.2"
+nah.version = "1.0.3"
 nah.serverpacket = require "network.packets.serverpacket"
 nah.clientpacket = require "network.packets.clientpacket"
 nah.commands = require("network.commands")[1]
@@ -106,7 +106,7 @@ function nah.init()
         nah.mode = "Client"
     end
 
-    if love.filesystem.getInfo("avatar.png") then 
+    if love.filesystem.getInfo("avatar.png") then
         nah.urav = love.image.newImageData("avatar.png")
         if nah.urav:getWidth() == 64 and nah.urav:getWidth() == 64 then
             nah.youravatar = love.graphics.newImage(nah.urav)
