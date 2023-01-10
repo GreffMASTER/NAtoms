@@ -1,8 +1,7 @@
 # NAtoms
-An online multiplayer fork for KleleAtoms.  
+An online multiplayer fork of KleleAtoms.  
 
 ![NAtoms Banner](https://repository-images.githubusercontent.com/478681548/15e295f7-7050-40b9-a7fd-78ddedbf8725)  
-(This project is still in development. There might be some bugs in the code and some features might change over time.)  
 
 This fork implements online multiplayer to KleleAtoms thru UDP using ENet.  
 
@@ -16,6 +15,7 @@ This fork implements online multiplayer to KleleAtoms thru UDP using ENet.
 
 ## Possible Planned Features
 - Vote system
+- Server browser (LAN & NAMS)
 - Dedicated server mode
 
 ## Aditional notes
