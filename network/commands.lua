@@ -182,7 +182,7 @@ function command.magic8ball(plyr,args)
         message = message..args[i].." "
     end
     net.enethost:broadcast(gmpacket.encode("MESSAGE",{plyr[2],"My Magic 8 Ball, "..message}))
-    local response = ballresponses[math.random(1,#ballresponses)]
+    local response = ballresponses[love.math.random(1,#ballresponses)]
     net.enethost:broadcast(gmpacket.encode("MESSAGE",{"Magic8Ball",response}))
 end
 
