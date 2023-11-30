@@ -166,4 +166,13 @@ function state.mobileAbsMode(enable)
     end
 end
 
+function state.curStateName()
+    for k,v in pairs(state.list) do
+        if v == curstate then
+            return k
+        end
+    end
+    return ""
+end
+
 return state

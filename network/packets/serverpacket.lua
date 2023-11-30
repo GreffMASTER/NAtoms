@@ -5,6 +5,7 @@ local sp = {}
 sp.public = {}
 
 function sp.public.AUTH(event,data)
+    -- data = {ver_check: str, player_name: str}
     local str = "NAtoms-v"..net.version.."-"..gmpacket.version.."-ka13"
     local hash = love.data.encode("string", "hex", love.data.hash("sha256", str))
 
@@ -73,6 +74,7 @@ end
 -- AVATAR STUFF
 
 function sp.AVHASH(event,data)
+    -- data = {av_hash: str}
     hash = data[1]
     if love.filesystem.getInfo("cache/"..hash..".png") then
         local avdata = love.image.newImageData("cache/"..hash..".png")
@@ -91,6 +93,7 @@ function sp.AVHASH(event,data)
 end
 
 function sp.AVATAR(event,data)
+    -- data = {b64_avatar: str}
     local avimage
     local avdata
     if data[1] then
@@ -125,12 +128,14 @@ function sp.AVATAR(event,data)
 end
 
 function sp.GETAV(event,data)
+    -- data = {avatar_index: int}
     local avindex = data[1]
     local avdata = net.avatars[avindex][2]
     event.peer:send(gmpacket.encode("AVATAR", {stuff.imgDataToB64(avdata),avdata:getFormat(),avindex}))
 end
 
 function sp.GETAVS(event,data)
+    -- data = nil
     for i,av in pairs(net.avatars) do
         if av and av[2] then
             local hash = love.data.encode("string", "hex", love.data.hash("sha256",av[2]))
@@ -142,7 +147,7 @@ end
 -- OTHER STUFF
 
 function sp.MESSAGE(event,data)
-
+    -- data = {message: str}
     local pindex = event.peer:index()
     local pnick = net.getPlayerByIndex(event.peer:index())[2]
     local pip = tostring(event.peer)
@@ -174,6 +179,7 @@ function sp.MESSAGE(event,data)
 end
 
 function sp.READY(event,data)
+    -- data = {ready_state: bool}
     local plyrnick
     for i, p in ipairs(net.players) do
         if p[1] == event.peer:index() then
@@ -190,6 +196,7 @@ end
 -- GAMELOGIC STUFF
 
 function sp.DONE(event,data)
+    -- data = nil
     net.playersdone[event.peer:index()] = true
     if net.allPlayersDone() then
         net.enethost:get_peer(net.gamelogic.curplayer):send(gmpacket.encode("YOURMOVE", {}))
@@ -197,6 +204,7 @@ function sp.DONE(event,data)
 end
 
 function sp.CLICKEDTILE(event,data)
+    --- data = {tile_x: int, tile_y: int}
     if event.peer:index() == net.gamelogic.curplayer and not net.gamelogic.animplaying then
         for i = 1, #net.playersdone do
             if net.playersdone[i] ~= 0 then

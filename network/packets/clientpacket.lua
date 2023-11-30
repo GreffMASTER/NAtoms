@@ -1,6 +1,7 @@
 local cp = {}
 
 function cp.COOLANDGOOD(event,data)
+    -- data = {new_index: int}
     net.connected = true
     net.yourindex = data[1]
     net.netmenu.setBgColor(net.yourindex)
@@ -17,10 +18,12 @@ end
 -- AVATAR STUFF
 
 function cp.GETAV(event,data)
+    -- data = nil
     net.clientpeer:send(gmpacket.encode("AVATAR", {stuff.imgDataToB64(net.urav),net.urav:getFormat()}))
 end
 
 function cp.AVHASH(event,data)
+    -- data = {av_hash: str, peer_index: int}
     local hash = data[1]
     local peerindex = data[2]
     if peerindex ~= net.yourindex then
@@ -35,6 +38,7 @@ function cp.AVHASH(event,data)
 end
 
 function cp.AVATAR(event,data)
+    -- data = {b64_avatar: str, format: str, av_index: int}
     local avindex = data[3]
     local avimage = nil
     if data[1] then
@@ -61,6 +65,7 @@ end
 -- OTHER STUFF
 
 function cp.MESSAGE(event,data)
+    -- data = {player_name: str, message: str}
     local plyrnick = data[1]
     local message = data[2]
     local str = "<"..plyrnick.."> "..message
@@ -76,10 +81,12 @@ function cp.MESSAGE(event,data)
 end
 
 function cp.CHATALERT(event,data)
+    -- data = {alert_text: str}
     table.insert(net.chatlog,data[1])
 end
 
 function cp.PLYRS(event,data)
+    -- data = {?huh?}
     if net.mode ~= "Server" then
         local playerdata = {}
         for i = 1, (#data) / 3 do
@@ -93,6 +100,7 @@ function cp.PLYRS(event,data)
 end
 
 function cp.CONN(event,data)
+    -- data = {player_name: str}
     _CAState.printmsg(data[1] .. " connected to the game.", 4)
     love.audio.play(net.sndconn)
     if not net.ingame then
@@ -101,6 +109,7 @@ function cp.CONN(event,data)
 end
 
 function cp.DISCONN(event,data)
+    -- data = {player_name: str, player_id: int}
     _CAState.printmsg(data[1] .. " disconnected from the game.", 4)
     love.audio.play(net.snddisconn)
     if not net.ingame then
@@ -114,6 +123,7 @@ function cp.DISCONN(event,data)
 end
 
 function cp.READY(event,data)
+    -- data = {player_name: str, ready_state: bool}
     if not net.ingame then
         if data[2] then
             _CAState.printmsg(data[1] .. " is ready.", 4)
@@ -128,12 +138,14 @@ function cp.READY(event,data)
 end
 
 function cp.COUNTING(event,data)
+    -- data = {countdown: int}
     net.netmenu.setImage(data[1])
     _CAState.printmsg("Game starting in " .. data[1] .. " second(s).", 1)
     love.audio.play(net.sndcountdown)
 end
 
 function cp.START(event,data)
+    -- data = {grid_w: int, grid_h: int, bitmap_players: int, curplayer: int}
     if net.mode == "Client" then
         _CAGridW = data[1]
         _CAGridH = data[2]
@@ -153,6 +165,7 @@ function cp.START(event,data)
 end
 
 function cp.NETVAR(event,data)
+    -- data = {varname: str, value: int(?)}
     local varname = data[1]
     local value = data[2]
     if value == "\rtable" then value = {} end
@@ -170,19 +183,29 @@ function cp.NETVAR(event,data)
 end
 
 function cp.COMMANDS(event,data)
+    -- data = {command_list: str}
     net.commandlist = string.explode(data[1],";")
 end
 
 -- GAMELOGIC STUFF
 
 function cp.CLICKON(event,data)
+    -- data = {tile_x: int, tile_y: int}
     net.prevplayerturn = net.gamelogic.curplayer
     net.waiting = true
     net.gamelogic.clickedTile(data[1], data[2])
 end
 
 function cp.YOURMOVE(event,data)
+    -- data = nil
     net.waiting = false
+end
+
+function cp.LOBBY(event,data) -- returns player to the lobby after the game is over
+    -- data = nil
+    if _CAState.curStateName() ~= "lobby" then
+        _CAState.change("lobby")
+    end
 end
 
 return cp

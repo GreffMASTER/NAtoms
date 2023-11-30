@@ -345,6 +345,9 @@ function gamestate.mousereleased(x,y,button)
                 _CAState.change("menu")
             else
                 _CAState.change("lobby")
+                if net.mode == "Server" then
+                    net.enethost:broadcast(gmpacket.encode("LOBBY", {}))
+                end
             end
         end
     end

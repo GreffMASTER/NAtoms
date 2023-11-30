@@ -25,7 +25,7 @@ function nah.resetVars()
     nah.enetclient = nil
     nah.hostevent = nil
     nah.clientpeer = nil
-    nah.mode = nil
+    nah.mode = nil  -- "Server" or "Client"
     nah.connected = false
     nah.players = {} -- {peer_index, nick, ready}
     nah.avatars = {false,false,false,false}
