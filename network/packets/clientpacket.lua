@@ -145,7 +145,7 @@ function cp.COUNTING(event,data)
 end
 
 function cp.START(event,data)
-    -- data = {grid_w: int, grid_h: int, bitmap_players: int, curplayer: int}
+    -- data = {grid_w: int, grid_h: int, bitarray_players: int, curplayer: int}
     if net.mode == "Client" then
         _CAGridW = data[1]
         _CAGridH = data[2]
@@ -165,7 +165,7 @@ function cp.START(event,data)
 end
 
 function cp.NETVAR(event,data)
-    -- data = {varname: str, value: int(?)}
+    -- data = {varname: str, value: any}
     local varname = data[1]
     local value = data[2]
     if value == "\rtable" then value = {} end
@@ -203,7 +203,7 @@ end
 
 function cp.LOBBY(event,data) -- returns player to the lobby after the game is over
     -- data = nil
-    if _CAState.curStateName() ~= "lobby" then
+    if _CAState.getcurstate() ~= "lobby" then
         _CAState.change("lobby")
     end
 end
